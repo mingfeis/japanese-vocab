@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J-Flash Pro Elite V2.6</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;500;900&family=Inter:wght@400;700&display=swap');
+        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background: #0f172a; color: #f1f5f9; touch-action: manipulation; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .flip-card-inner { transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; height: 600px; }
+        .flipped { transform: rotateY(180deg); }
+        .front, .back { backface-visibility: hidden; position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 2.5rem; overflow: hidden; }
+        .back { transform: rotateY(180deg); background: #ffffff; color: #1e293b; }
+        .front { background: #ffffff; color: #1e293b; border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer; }
+        .audio-btn { color: #6366f1; transition: all 0.2s; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; }
+        .audio-btn:hover { background: rgba(99, 102, 241, 0.1); transform: scale(1.1); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4">
+
+    <div id="init-overlay" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white p-6 text-center">
+        <div class="mb-6 relative">
+            <div class="w-24 h-24 bg-white/20 rounded-full animate-ping absolute inset-0"></div>
+            <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center relative shadow-2xl cursor-pointer" onclick="initApp()">
+                <i class="fas fa-play text-indigo-600 text-3xl ml-1"></i>
+            </div>
+        </div>
+        <h1 class="text-2xl font-black mb-8 tracking-widest uppercase italic">Start Review</h1>
+        <button onclick="initApp()" class="bg-white text-indigo-600 px-14 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all tracking-widest text-sm uppercase">Enter</button>
+    </div>
+
+    <div class="w-full max-w-md glass-panel p-4 rounded-3xl mb-6 flex items-center justify-between">
+        <div class="flex flex-col gap-1">
+            <span id="progress-text" class="text-xs font-bold text-white tracking-widest">0 / 0</span>
+            <div class="w-32 bg-white/10 h-1.5 rounded-full overflow-hidden border border-white/5">
+                <div id="progress-bar" class="bg-indigo-500 h-full w-0 transition-all duration-500"></div>
+            </div>
+        </div>
+        <label class="text-indigo-400 hover:text-indigo-300 cursor-pointer transition flex items-center gap-2 bg-indigo-500/10 px-4 py-2 rounded-xl border border-indigo-500/20 shadow-sm">
+            <i class="fas fa-file-csv"></i>
+            <span class="text-[10px] font-black uppercase">Import</span>
+            <input type="file" id="csv-input" accept=".csv" class="hidden">
+        </label>
+    </div>
+
+    <div id="main-container" class="w-full max-w-md hidden">
+        <div class="relative w-full" style="height: 600px;">
+            <div id="card-inner" class="flip-card-inner relative w-full">
+                <div class="front flex flex-col items-center justify-center shadow-2xl" onclick="flipToBack()">
+                    <div id="word-front" class="text-7xl font-black text-slate-800 mb-8 text-center leading-tight px-4 tracking-tighter">...</div>
+                    <button onclick="speakCurrent(event)" class="audio-btn"><i class="fas fa-volume-up text-3xl"></i></button>
+                    <p class="absolute bottom-10 text-slate-300 text-[11px] font-bold tracking-[0.3em] uppercase opacity-50">Tap to reveal</p>
+                </div>
+                <div class="back shadow-2xl flex flex-col p-8 overflow-hidden border-t-8 border-indigo-500">
+                    <div class="w-full h-52 rounded-[2rem] mb-4 overflow-hidden shadow-inner bg-slate-900 flex-shrink-0 cursor-pointer" onclick="flipToFront()">
+                        <img id="card-image" class="w-full h-full object-cover" src="">
+                    </div>
+                    <div id="word-back-content" class="flex-1 overflow-y-auto no-scrollbar mb-4 text-slate-700"></div>
+                    <div class="grid grid-cols-4 gap-2 pt-4 border-t border-slate-100 flex-shrink-0">
+                        <button onclick="handleSRS('again', event)" class="py-4 bg-rose-50 text-rose-500 rounded-2xl font-black text-[10px] uppercase border border-rose-100">Again</button>
+                        <button onclick="handleSRS('hard', event)" class="py-4 bg-amber-50 text-amber-600 rounded-2xl font-black text-[10px] uppercase border border-amber-100">Hard</button>
+                        <button onclick="handleSRS('good', event)" class="py-4 bg-emerald-50 text-emerald-600 rounded-2xl font-black text-[10px] uppercase border border-emerald-100">Good</button>
+                        <button onclick="handleSRS('easy', event)" class="py-4 bg-sky-50 text-sky-600 rounded-2xl font-black text-[10px] uppercase border border-sky-100">Easy</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let activeQueue = [];
+        let totalCount = 0;
+        let voiceEnabled = false;
+        let japaneseVoice = null;
+        let currentCard = null;
+
+        function loadVoices() {
+            const voices = window.speechSynthesis.getVoices();
+            japaneseVoice = voices.find(v => v.lang.includes('ja')) || voices.find(v => v.lang.includes('JP'));
+        }
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+
+        function initApp() {
+            window.speechSynthesis.cancel();
+            loadVoices();
+            voiceEnabled = true;
+            document.getElementById('init-overlay').classList.add('hidden');
+            const saved = localStorage.getItem('srs_elite_v2_6');
+            if (saved) {
+                const d = JSON.parse(saved);
+                activeQueue = d.activeQueue; totalCount = d.totalCount;
+                if (activeQueue.length > 0) { document.getElementById('main-container').classList.remove('hidden'); renderCard(); }
+            }
+        }
+
+        document.getElementById('csv-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const text = event.target.result;
+                const cleanData = text.replace(/"""/g, '"').replace(/""/g, '"');
+                const rawLines = cleanData.split(/\r?\n/);
+                activeQueue = [];
+                let temp = null;
+                rawLines.forEach(line => {
+                    let row = line.trim().replace(/^"+|"+$/g, '');
+                    if (!row) return;
+                    if (row.match(/^第\d+课/)) {
+                        const parts = row.split(',');
+                        temp = { kanji: (parts[2] || parts[1] || "").replace(/"/g, '').trim(), content: row };
+                        activeQueue.push(temp);
+                    } else if (temp) {
+                        temp.content += "\n" + row;
+                    }
+                });
+                if (activeQueue.length > 0) {
+                    totalCount = activeQueue.length;
+                    document.getElementById('main-container').classList.remove('hidden');
+                    saveProgress(); renderCard();
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        function renderCard() {
+            if (activeQueue.length === 0) { localStorage.removeItem('srs_elite_v2_6'); location.reload(); return; }
+            currentCard = activeQueue[0];
+            document.getElementById('card-inner').classList.remove('flipped');
+            document.getElementById('word-front').innerText = currentCard.kanji;
+            
+            const back = document.getElementById('word-back-content');
+            back.innerHTML = '';
+            const lines = currentCard.content.split('\n');
+            
+            lines.forEach((line, i) => {
+                let cleanText = line.trim()
+                    .replace(/^"+|"+$/g, '') 
+                    .replace(/\[\d+(?:,\s*\d+)*\]$/, '')
+                    .replace(/"+$/, '')
+                    .trim();
+
+                if (!cleanText || cleanText === "" || /^"+$/.test(cleanText)) return;
+
+                const container = document.createElement('div');
+                if (i === 0) {
+                    container.className = "flex items-center justify-between mb-4 pb-2 border-b-2 border-slate-100";
+                    container.innerHTML = `<span class="text-3xl font-black text-slate-800 tracking-tighter">${cleanText}</span>`;
+                    const btn = document.createElement('button');
+                    btn.className = "audio-btn"; btn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                    btn.onclick = (e) => { e.stopPropagation(); speak(currentCard.kanji); };
+                    container.appendChild(btn);
+                } else if (cleanText.match(/[\[\u4e00-\u9fa5]/) && !cleanText.includes('【')) {
+                    container.className = "text-3xl font-bold text-indigo-600 mb-10 mt-2 leading-tight tracking-tight";
+                    container.innerText = cleanText;
+                } else if (cleanText.includes('【例句】')) {
+                    let sentence = cleanText.replace('【例句】', '').trim();
+                    container.className = "p-4 bg-slate-50 rounded-2xl mb-4 flex items-start justify-between gap-3 border border-slate-100 shadow-sm";
+                    const p = document.createElement('p');
+                    p.className = "text-sm font-medium text-slate-700 leading-relaxed";
+                    p.innerText = sentence;
+                    const btn = document.createElement('button');
+                    btn.className = "audio-btn flex-shrink-0"; btn.innerHTML = '<i class="fas fa-volume-up text-base"></i>';
+                    btn.onclick = (e) => { e.stopPropagation(); speak(sentence); };
+                    container.appendChild(p); container.appendChild(btn);
+                } else {
+                    container.className = "text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 opacity-60";
+                    container.innerText = cleanText;
+                }
+                back.appendChild(container);
+            });
+
+            document.getElementById('card-image').src = `https://loremflickr.com/400/300/${encodeURIComponent(currentCard.kanji)}`;
+            updateUI();
+            if (voiceEnabled) setTimeout(() => speak(currentCard.kanji), 600);
+        }
+
+        function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
+        function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
+        function speakCurrent(event) { event.stopPropagation(); speak(currentCard.kanji); }
+        function handleSRS(type, event) {
+            event.stopPropagation();
+            const c = activeQueue.shift();
+            if (type === 'again') activeQueue.splice(1, 0, c);
+            else if (type === 'hard') activeQueue.splice(Math.floor(activeQueue.length/2), 0, c);
+            else if (type === 'good') activeQueue.push(c);
+            saveProgress(); renderCard();
+        }
+
+        function speak(text) {
+            if (!text) return;
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(text);
+            if (japaneseVoice) utter.voice = japaneseVoice;
+            utter.lang = 'ja-JP'; utter.rate = 0.9;
+            window.speechSynthesis.speak(utter);
+        }
+
+        function saveProgress() { localStorage.setItem('srs_elite_v2_6', JSON.stringify({ activeQueue, totalCount })); }
+        function updateUI() {
+            document.getElementById('progress-bar').style.width = `${((totalCount-activeQueue.length)/totalCount)*100}%`;
+            document.getElementById('progress-text').innerText = `${totalCount-activeQueue.length} / ${totalCount}`;
+        }
+    </script>
+</body>
+</html>
