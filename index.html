@@ -3,21 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>J-Flash Pro Elite V2.6</title>
+    <title>J-Flash Pro Elite V2.8</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;500;900&family=Inter:wght@400;700&display=swap');
         body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background: #0f172a; color: #f1f5f9; touch-action: manipulation; }
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .flip-card-inner { transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; height: 600px; }
+        .flip-card-inner { transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; height: 580px; }
         .flipped { transform: rotateY(180deg); }
         .front, .back { backface-visibility: hidden; position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 2.5rem; overflow: hidden; }
         .back { transform: rotateY(180deg); background: #ffffff; color: #1e293b; }
         .front { background: #ffffff; color: #1e293b; border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer; }
         .audio-btn { color: #6366f1; transition: all 0.2s; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; }
-        .audio-btn:hover { background: rgba(99, 102, 241, 0.1); transform: scale(1.1); }
+        .audio-btn:active { transform: scale(0.9); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* 圖片背景模糊化處理 */
+        .img-blur-bg {
+            position: absolute; inset: 0; filter: blur(20px); opacity: 0.3; transform: scale(1.2); object-fit: cover;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4">
@@ -29,42 +34,41 @@
                 <i class="fas fa-play text-indigo-600 text-3xl ml-1"></i>
             </div>
         </div>
-        <h1 class="text-2xl font-black mb-8 tracking-widest uppercase italic">Start Review</h1>
-        <button onclick="initApp()" class="bg-white text-indigo-600 px-14 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all tracking-widest text-sm uppercase">Enter</button>
+        <button onclick="initApp()" class="bg-white text-indigo-600 px-14 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all tracking-widest text-sm uppercase">Unleash Speech</button>
     </div>
 
     <div class="w-full max-w-md glass-panel p-4 rounded-3xl mb-6 flex items-center justify-between">
         <div class="flex flex-col gap-1">
-            <span id="progress-text" class="text-xs font-bold text-white tracking-widest">0 / 0</span>
-            <div class="w-32 bg-white/10 h-1.5 rounded-full overflow-hidden border border-white/5">
+            <span id="progress-text" class="text-xs font-bold text-white tracking-widest uppercase">0 / 0</span>
+            <div class="w-32 bg-white/10 h-1.5 rounded-full overflow-hidden">
                 <div id="progress-bar" class="bg-indigo-500 h-full w-0 transition-all duration-500"></div>
             </div>
         </div>
         <label class="text-indigo-400 hover:text-indigo-300 cursor-pointer transition flex items-center gap-2 bg-indigo-500/10 px-4 py-2 rounded-xl border border-indigo-500/20 shadow-sm">
-            <i class="fas fa-file-csv"></i>
+            <i class="fas fa-plus-circle"></i>
             <span class="text-[10px] font-black uppercase">Import</span>
             <input type="file" id="csv-input" accept=".csv" class="hidden">
         </label>
     </div>
 
     <div id="main-container" class="w-full max-w-md hidden">
-        <div class="relative w-full" style="height: 600px;">
+        <div class="relative w-full" style="height: 580px;">
             <div id="card-inner" class="flip-card-inner relative w-full">
                 <div class="front flex flex-col items-center justify-center shadow-2xl" onclick="flipToBack()">
-                    <div id="word-front" class="text-7xl font-black text-slate-800 mb-8 text-center leading-tight px-4 tracking-tighter">...</div>
+                    <div id="word-front" class="text-7xl font-black text-slate-800 mb-8 text-center px-4 tracking-tighter">...</div>
                     <button onclick="speakCurrent(event)" class="audio-btn"><i class="fas fa-volume-up text-3xl"></i></button>
-                    <p class="absolute bottom-10 text-slate-300 text-[11px] font-bold tracking-[0.3em] uppercase opacity-50">Tap to reveal</p>
                 </div>
                 <div class="back shadow-2xl flex flex-col p-8 overflow-hidden border-t-8 border-indigo-500">
-                    <div class="w-full h-52 rounded-[2rem] mb-4 overflow-hidden shadow-inner bg-slate-900 flex-shrink-0 cursor-pointer" onclick="flipToFront()">
-                        <img id="card-image" class="w-full h-full object-cover" src="">
+                    <div class="w-full h-44 rounded-3xl mb-4 overflow-hidden relative bg-slate-900 cursor-pointer" onclick="flipToFront()">
+                        <img id="card-image-bg" class="img-blur-bg" src="">
+                        <img id="card-image" class="relative w-full h-full object-contain z-10" src="">
                     </div>
                     <div id="word-back-content" class="flex-1 overflow-y-auto no-scrollbar mb-4 text-slate-700"></div>
                     <div class="grid grid-cols-4 gap-2 pt-4 border-t border-slate-100 flex-shrink-0">
-                        <button onclick="handleSRS('again', event)" class="py-4 bg-rose-50 text-rose-500 rounded-2xl font-black text-[10px] uppercase border border-rose-100">Again</button>
-                        <button onclick="handleSRS('hard', event)" class="py-4 bg-amber-50 text-amber-600 rounded-2xl font-black text-[10px] uppercase border border-amber-100">Hard</button>
-                        <button onclick="handleSRS('good', event)" class="py-4 bg-emerald-50 text-emerald-600 rounded-2xl font-black text-[10px] uppercase border border-emerald-100">Good</button>
-                        <button onclick="handleSRS('easy', event)" class="py-4 bg-sky-50 text-sky-600 rounded-2xl font-black text-[10px] uppercase border border-sky-100">Easy</button>
+                        <button onclick="handleSRS('again', event)" class="py-4 bg-rose-50 text-rose-500 rounded-2xl font-black text-[10px] uppercase">Again</button>
+                        <button onclick="handleSRS('hard', event)" class="py-4 bg-amber-50 text-amber-600 rounded-2xl font-black text-[10px] uppercase">Hard</button>
+                        <button onclick="handleSRS('good', event)" class="py-4 bg-emerald-50 text-emerald-600 rounded-2xl font-black text-[10px] uppercase">Good</button>
+                        <button onclick="handleSRS('easy', event)" class="py-4 bg-sky-50 text-sky-600 rounded-2xl font-black text-[10px] uppercase">Easy</button>
                     </div>
                 </div>
             </div>
@@ -77,22 +81,20 @@
         let voiceEnabled = false;
         let japaneseVoice = null;
         let currentCard = null;
+        let globalSeed = 0; // 用於強制圖片不重複
 
         function loadVoices() {
-            const voices = window.speechSynthesis.getVoices();
-            japaneseVoice = voices.find(v => v.lang.includes('ja')) || voices.find(v => v.lang.includes('JP'));
+            const vs = window.speechSynthesis.getVoices();
+            japaneseVoice = vs.find(v => v.lang.includes('ja')) || vs.find(v => v.lang.includes('JP'));
         }
         window.speechSynthesis.onvoiceschanged = loadVoices;
 
         function initApp() {
-            window.speechSynthesis.cancel();
-            loadVoices();
-            voiceEnabled = true;
+            window.speechSynthesis.cancel(); loadVoices(); voiceEnabled = true;
             document.getElementById('init-overlay').classList.add('hidden');
-            const saved = localStorage.getItem('srs_elite_v2_6');
+            const saved = localStorage.getItem('srs_elite_v2_8');
             if (saved) {
-                const d = JSON.parse(saved);
-                activeQueue = d.activeQueue; totalCount = d.totalCount;
+                const d = JSON.parse(saved); activeQueue = d.activeQueue; totalCount = d.totalCount;
                 if (activeQueue.length > 0) { document.getElementById('main-container').classList.remove('hidden'); renderCard(); }
             }
         }
@@ -102,107 +104,98 @@
             const reader = new FileReader();
             reader.onload = (event) => {
                 const text = event.target.result;
-                const cleanData = text.replace(/"""/g, '"').replace(/""/g, '"');
+                const cleanData = text.replace(/"+/g, '"').replace(/""/g, '"');
                 const rawLines = cleanData.split(/\r?\n/);
-                activeQueue = [];
-                let temp = null;
-                rawLines.forEach(line => {
-                    let row = line.trim().replace(/^"+|"+$/g, '');
-                    if (!row) return;
+                activeQueue = []; let temp = null;
+                rawLines.forEach((line, index) => {
+                    let row = line.trim().replace(/^"+|"+$/g, ''); if (!row) return;
                     if (row.match(/^第\d+课/)) {
-                        const parts = row.split(',');
-                        temp = { kanji: (parts[2] || parts[1] || "").replace(/"/g, '').trim(), content: row };
+                        const pts = row.split(',');
+                        temp = { 
+                            kanji: (pts[2] || pts[1] || "").replace(/"/g, '').trim(), 
+                            content: row, 
+                            chinese: (pts[2] || "").split(' ')[1] || "",
+                            id: index // 賦予唯一編號
+                        };
                         activeQueue.push(temp);
-                    } else if (temp) {
-                        temp.content += "\n" + row;
-                    }
+                    } else if (temp) { temp.content += "\n" + row; }
                 });
-                if (activeQueue.length > 0) {
-                    totalCount = activeQueue.length;
-                    document.getElementById('main-container').classList.remove('hidden');
-                    saveProgress(); renderCard();
-                }
+                if (activeQueue.length > 0) { totalCount = activeQueue.length; document.getElementById('main-container').classList.remove('hidden'); saveProgress(); renderCard(); }
             };
             reader.readAsText(file);
         });
 
         function renderCard() {
-            if (activeQueue.length === 0) { localStorage.removeItem('srs_elite_v2_6'); location.reload(); return; }
+            if (activeQueue.length === 0) { localStorage.removeItem('srs_elite_v2_8'); location.reload(); return; }
             currentCard = activeQueue[0];
             document.getElementById('card-inner').classList.remove('flipped');
             document.getElementById('word-front').innerText = currentCard.kanji;
-            
             const back = document.getElementById('word-back-content');
             back.innerHTML = '';
-            const lines = currentCard.content.split('\n');
             
-            lines.forEach((line, i) => {
-                let cleanText = line.trim()
-                    .replace(/^"+|"+$/g, '') 
-                    .replace(/\[\d+(?:,\s*\d+)*\]$/, '')
-                    .replace(/"+$/, '')
-                    .trim();
-
-                if (!cleanText || cleanText === "" || /^"+$/.test(cleanText)) return;
+            currentCard.content.split('\n').forEach((line, i) => {
+                let clean = line.trim().replace(/^"+|"+$/g, '').replace(/\[\d+(?:,\s*\d+)*\]$/, '').replace(/"/g, '').trim();
+                if (!clean || clean === "" || /^"+$/.test(clean)) return;
 
                 const container = document.createElement('div');
                 if (i === 0) {
                     container.className = "flex items-center justify-between mb-4 pb-2 border-b-2 border-slate-100";
-                    container.innerHTML = `<span class="text-3xl font-black text-slate-800 tracking-tighter">${cleanText}</span>`;
+                    container.innerHTML = `<span class="text-3xl font-black text-slate-800">${clean}</span>`;
                     const btn = document.createElement('button');
                     btn.className = "audio-btn"; btn.innerHTML = '<i class="fas fa-volume-up"></i>';
                     btn.onclick = (e) => { e.stopPropagation(); speak(currentCard.kanji); };
                     container.appendChild(btn);
-                } else if (cleanText.match(/[\[\u4e00-\u9fa5]/) && !cleanText.includes('【')) {
-                    container.className = "text-3xl font-bold text-indigo-600 mb-10 mt-2 leading-tight tracking-tight";
-                    container.innerText = cleanText;
-                } else if (cleanText.includes('【例句】')) {
-                    let sentence = cleanText.replace('【例句】', '').trim();
+                } else if (clean.match(/[\[\u4e00-\u9fa5]/) && !clean.includes('【')) {
+                    container.className = "text-3xl font-bold text-indigo-600 mb-10 mt-2 leading-tight";
+                    container.innerText = clean;
+                } else if (clean.includes('【例句】')) {
+                    let sent = clean.replace('【例句】', '').trim();
                     container.className = "p-4 bg-slate-50 rounded-2xl mb-4 flex items-start justify-between gap-3 border border-slate-100 shadow-sm";
-                    const p = document.createElement('p');
-                    p.className = "text-sm font-medium text-slate-700 leading-relaxed";
-                    p.innerText = sentence;
+                    container.innerHTML = `<p class="text-sm font-medium text-slate-700 leading-relaxed">${sent}</p>`;
                     const btn = document.createElement('button');
                     btn.className = "audio-btn flex-shrink-0"; btn.innerHTML = '<i class="fas fa-volume-up text-base"></i>';
-                    btn.onclick = (e) => { e.stopPropagation(); speak(sentence); };
-                    container.appendChild(p); container.appendChild(btn);
+                    btn.onclick = (e) => { e.stopPropagation(); speak(sent); };
+                    container.appendChild(btn);
                 } else {
                     container.className = "text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 opacity-60";
-                    container.innerText = cleanText;
+                    container.innerText = clean;
                 }
                 back.appendChild(container);
             });
 
-            document.getElementById('card-image').src = `https://loremflickr.com/400/300/${encodeURIComponent(currentCard.kanji)}`;
-            updateUI();
-            if (voiceEnabled) setTimeout(() => speak(currentCard.kanji), 600);
+            // 圖片強制去重邏輯
+            globalSeed++; // 每次渲染都改變全局種子
+            const finalSeed = currentCard.id + globalSeed + Math.floor(Math.random() * 50);
+            const imageUrl = `https://loremflickr.com/400/300/${encodeURIComponent(currentCard.kanji || currentCard.chinese || 'japan')}?lock=${finalSeed}`;
+            
+            document.getElementById('card-image').src = imageUrl;
+            document.getElementById('card-image-bg').src = imageUrl;
+            
+            updateUI(); if (voiceEnabled) setTimeout(() => speak(currentCard.kanji), 600);
         }
 
         function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
         function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
         function speakCurrent(event) { event.stopPropagation(); speak(currentCard.kanji); }
         function handleSRS(type, event) {
-            event.stopPropagation();
-            const c = activeQueue.shift();
+            event.stopPropagation(); const c = activeQueue.shift();
             if (type === 'again') activeQueue.splice(1, 0, c);
             else if (type === 'hard') activeQueue.splice(Math.floor(activeQueue.length/2), 0, c);
             else if (type === 'good') activeQueue.push(c);
             saveProgress(); renderCard();
         }
 
-        function speak(text) {
-            if (!text) return;
-            window.speechSynthesis.cancel();
-            const utter = new SpeechSynthesisUtterance(text);
-            if (japaneseVoice) utter.voice = japaneseVoice;
-            utter.lang = 'ja-JP'; utter.rate = 0.9;
-            window.speechSynthesis.speak(utter);
+        function speak(t) {
+            if (!t) return; window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(t); if (japaneseVoice) u.voice = japaneseVoice;
+            u.lang = 'ja-JP'; u.rate = 0.9; window.speechSynthesis.speak(u);
         }
 
-        function saveProgress() { localStorage.setItem('srs_elite_v2_6', JSON.stringify({ activeQueue, totalCount })); }
+        function saveProgress() { localStorage.setItem('srs_elite_v2_8', JSON.stringify({ activeQueue, totalCount })); }
         function updateUI() {
-            document.getElementById('progress-bar').style.width = `${((totalCount-activeQueue.length)/totalCount)*100}%`;
-            document.getElementById('progress-text').innerText = `${totalCount-activeQueue.length} / ${totalCount}`;
+            const prog = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
+            document.getElementById('progress-bar').style.width = `${prog}%`;
+            document.getElementById('progress-text').innerText = `${totalCount - activeQueue.length} / ${totalCount}`;
         }
     </script>
 </body>
