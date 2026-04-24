@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J-Flash Pro V4.6</title>
+    <title>J-Flash Pro V4.8</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; background: #0f172a; color: #f1f5f9; touch-action: manipulation; overflow: hidden; }
@@ -15,8 +14,8 @@
         .front, .back { backface-visibility: hidden; position: absolute; inset: 0; border-radius: 2.5rem; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
         .back { transform: rotateY(180deg); background: #ffffff; color: #1e293b; }
         .front { background: #ffffff; color: #1e293b; cursor: pointer; }
-        .audio-btn { transition: all 0.2s; -webkit-tap-highlight-color: transparent; }
-        .audio-btn:active { transform: scale(0.8); background-color: rgba(99, 102, 241, 0.1); }
+        .audio-btn { transition: all 0.2s; -webkit-tap-highlight-color: transparent; border: none; outline: none; }
+        .audio-btn:active { transform: scale(0.85); background-color: rgba(99, 102, 241, 0.1); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4">
@@ -48,13 +47,13 @@
                     </div>
                     <div class="flex-1 flex flex-col items-center justify-center p-6 bg-white">
                         <div id="word-front" class="text-7xl font-black text-slate-800 mb-8 text-center tracking-tighter leading-tight">...</div>
-                        <button onclick="event.stopPropagation(); speakText(null)" class="audio-btn text-indigo-500 p-4 rounded-full bg-slate-50 border border-indigo-100 shadow-sm">
-                            <i class="fas fa-volume-up text-3xl"></i>
+                        <button onclick="event.stopPropagation(); speakDual(null)" class="audio-btn text-indigo-600 p-5 rounded-full bg-indigo-50/50">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M14 5v14l-7-5H3v-4h4l7-5zm3.5 7c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM15 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                         </button>
                     </div>
                 </div>
-                <div class="back flex flex-col p-8 border-t-8 border-indigo-500">
-                    <div id="word-back-content" class="flex-1 overflow-y-auto pr-2 no-scrollbar" onclick="flipToFront()"></div>
+                <div class="back shadow-2xl flex flex-col p-8 border-t-8 border-indigo-500">
+                    <div id="word-back-content" class="flex-1 overflow-y-auto no-scrollbar mb-4" onclick="flipToFront()"></div>
                     <div class="grid grid-cols-4 gap-2 pt-4 border-t border-slate-100 mt-auto">
                         <button onclick="handleSRS('again', event)" class="py-4 bg-rose-50 text-rose-500 rounded-2xl font-black text-[10px]">AGAIN</button>
                         <button onclick="handleSRS('hard', event)" class="py-4 bg-amber-50 text-amber-600 rounded-2xl font-black text-[10px]">HARD</button>
@@ -70,26 +69,32 @@
         let activeQueue = [];
         let totalCount = 0;
         let voiceEnabled = false;
-        let enhancedVoice = null;
+        let maleVoice = null;
+        let femaleVoice = null;
 
-        function pickBestVoice() {
+        function pickVoices() {
             const vs = window.speechSynthesis.getVoices();
-            // 關鍵：優先鎖定 Enhanced (高品質) 的日文聲音
-            enhancedVoice = vs.find(v => v.lang.includes('ja') && v.name.includes('Enhanced')) || 
-                            vs.find(v => v.lang.includes('ja') && (v.name.includes('Kyoko') || v.name.includes('female'))) ||
-                            vs.find(v => v.lang.includes('ja'));
+            // 尋找高品質 Enhanced 女聲
+            femaleVoice = vs.find(v => v.lang.includes('ja') && v.name.includes('Enhanced') && (v.name.includes('Kyoko') || v.name.includes('female'))) ||
+                          vs.find(v => v.lang.includes('ja') && (v.name.includes('Kyoko') || v.name.includes('female'))) ||
+                          vs.find(v => v.lang.includes('ja'));
+
+            // 尋找高品質 Enhanced 男聲
+            maleVoice = vs.find(v => v.lang.includes('ja') && v.name.includes('Enhanced') && (v.name.includes('Otoya') || v.name.includes('male'))) ||
+                        vs.find(v => v.lang.includes('ja') && (v.name.includes('Otoya') || v.name.includes('male'))) ||
+                        femaleVoice; 
         }
         if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = pickBestVoice;
+            speechSynthesis.onvoiceschanged = pickVoices;
         }
 
         function initApp() {
-            pickBestVoice();
+            pickVoices();
             voiceEnabled = true;
             window.speechSynthesis.cancel();
             document.getElementById('init-overlay').style.display = 'none';
             document.getElementById('main-container').classList.remove('hidden');
-            const saved = localStorage.getItem('srs_v4_6');
+            const saved = localStorage.getItem('srs_v4_8');
             if (saved) {
                 const d = JSON.parse(saved); activeQueue = d.activeQueue || []; totalCount = d.totalCount || 0;
                 if (activeQueue.length > 0) renderCard();
@@ -136,7 +141,7 @@
                 const div = document.createElement('div');
                 if (i === 0) {
                     div.className = "text-2xl font-black mb-4 pb-2 border-b-2 text-slate-800 flex justify-between items-center";
-                    div.innerHTML = `<span>${clean}</span><button class="audio-btn text-indigo-500 p-2" onclick="event.stopPropagation(); speakText('${current.kanji}')"><i class="fas fa-volume-up text-xl"></i></button>`;
+                    div.innerHTML = `<span>${clean}</span><button class="audio-btn text-indigo-500 p-2" onclick="event.stopPropagation(); speakDual('${current.kanji}')"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M14 5v14l-7-5H3v-4h4l7-5zm3.5 7c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg></button>`;
                 } else if (clean.match(/[\[\u4e00-\u9fa5]/) && !clean.includes('【')) {
                     div.className = "text-3xl font-bold text-indigo-600 mb-8 mt-2";
                     div.innerText = clean;
@@ -144,7 +149,7 @@
                 } else if (clean.includes('【例句】')) {
                     const sent = clean.replace('【例句】', '').trim();
                     div.className = "p-4 bg-slate-50 rounded-2xl mb-4 flex items-center justify-between gap-3 border border-slate-100 shadow-sm";
-                    div.innerHTML = `<p class="text-sm font-medium text-slate-700 leading-relaxed flex-1">${sent}</p><button class="audio-btn text-indigo-500 bg-white p-3 rounded-full shadow-sm" onclick="event.stopPropagation(); speakText('${sent}')"><i class="fas fa-volume-up"></i></button>`;
+                    div.innerHTML = `<p class="text-sm font-medium text-slate-700 leading-relaxed flex-1">${sent}</p><button class="audio-btn text-indigo-500 bg-white p-3 rounded-full shadow-sm" onclick="event.stopPropagation(); speakDual('${sent}')"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 5v14l-7-5H3v-4h4l7-5zm3.5 7c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg></button>`;
                 } else {
                     div.className = "text-[11px] font-bold text-slate-400 uppercase mb-2 opacity-60";
                     div.innerText = clean;
@@ -156,19 +161,30 @@
             updateUI();
             if (voiceEnabled) {
                 window.speechSynthesis.cancel();
-                // 延長到 1.0 秒，確保 Enhanced 語音檔案載入
-                setTimeout(() => speakText(current.kanji), 1000);
+                setTimeout(() => speakDual(current.kanji), 1000);
             }
         }
 
-        function speakText(text) {
+        function speakDual(text) {
             const t = text || activeQueue[0].kanji;
             window.speechSynthesis.cancel();
-            const utter = new SpeechSynthesisUtterance(t);
-            if (enhancedVoice) utter.voice = enhancedVoice;
-            utter.lang = 'ja-JP';
-            // 不設 pitch/rate 以維持高品質原音
-            window.speechSynthesis.speak(utter);
+            
+            // 男聲第一遍
+            const m = new SpeechSynthesisUtterance(t);
+            if (maleVoice) m.voice = maleVoice;
+            m.lang = 'ja-JP';
+            m.rate = 0.85;
+
+            m.onend = () => {
+                setTimeout(() => {
+                    const f = new SpeechSynthesisUtterance(t);
+                    if (femaleVoice) f.voice = femaleVoice;
+                    f.lang = 'ja-JP';
+                    f.rate = 0.95;
+                    window.speechSynthesis.speak(f);
+                }, 800);
+            };
+            window.speechSynthesis.speak(m);
         }
 
         function handleSRS(type, event) {
@@ -180,7 +196,7 @@
         }
         function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
         function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
-        function saveProgress() { localStorage.setItem('srs_v4_6', JSON.stringify({ activeQueue, totalCount })); }
+        function saveProgress() { localStorage.setItem('srs_v4_8', JSON.stringify({ activeQueue, totalCount })); }
         function updateUI() {
             const p = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
             document.getElementById('progress-bar').style.width = p + '%';
