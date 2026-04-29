@@ -138,64 +138,58 @@
         reader.readAsText(file);
     });
 
-        function renderCard() {
-            if (activeQueue.length === 0) return;
-            const current = activeQueue[0];
-            document.getElementById('card-inner').classList.remove('flipped');
-            document.getElementById('word-front').innerText = current.kanji;
-            
-            const img = document.getElementById('card-image-front');
-            img.style.opacity = '0';
-            const kw = current.kanji.replace(/[^\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/g, '');
-            img.src = `https://loremflickr.com/600/450/${encodeURIComponent(kw || 'japan')}?lock=${Math.floor(Math.random()*1000)}`;
-            img.onload = () => img.style.opacity = '1';
+    function renderCard() {
+        if (activeQueue.length === 0) return;
+        const current = activeQueue[0];
 
-            const back = document.getElementById('word-back-content');
-            back.innerHTML = '';
-            current.content.split('\n').forEach((line, i) => {
-                let clean = line.trim().replace(/^"+|"+$/g, '').replace(/\[\d+(?:,\s*\d+)*\]$/, '').replace(/"/g, '').trim();
-                if (!clean) return;
+        // 1. 重置翻轉狀態
+        document.getElementById('card-inner').classList.remove('flipped');
+    
+        // 2. 正面顯示
+        document.getElementById('word-front').innerText = current.kanji;
 
-                // 在 renderCard() 內部生成例句列表
-            let exampleHTML = '';
-            if (current.examples && current.examples.length > 0) {
-                current.examples.forEach(ex => {
-                    exampleHTML += `
-                    <div class="example-item flex items-center justify-between p-2 mb-2 bg-slate-50 rounded-lg border border-slate-100">
-                    <p class="text-sm text-slate-700">${ex}</p>
-                    <button class="audio-btn p-2 text-blue-500" onclick="event.stopPropagation(); speak('${ex}')">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 5v14l-7-5H3v-4h4l7-5zm3.5 7c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
-                    </button>
-                </div>`;
-            });
+        // 3. 背面內容構造
+        const back = document.getElementById('word-back-content');
+    
+        // 生成例句 HTML 區塊
+        let exampleHTML = '';
+        if (current.examples && current.examples.length > 0) {
+            current.examples.forEach(ex => {
+            if(ex.trim() !== "") {
+                exampleHTML += `
+                    <div class="p-3 bg-slate-50 rounded-xl mb-3 flex items-start justify-between gap-3 border border-slate-100 shadow-sm">
+                        <p class="text-sm text-slate-700 leading-relaxed flex-1">${ex}</p>
+                        <button class="audio-btn text-indigo-500 bg-white p-2 rounded-full shadow-sm flex-shrink-0" 
+                                onclick="event.stopPropagation(); speak('${ex}')">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M14 5v14l-7-5H3v-4h4l7-5zm3.5 7c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+                            </svg>
+                        </button>
+                    </div>`;
             }
-// 然後將 exampleHTML 插入到卡片背面的容器中
-                const div = document.createElement('div');
-                if (i === 0) {
-                    div.className = "text-2xl font-black mb-4 pb-2 border-b-2 text-slate-800 flex justify-between items-center";
-                    div.innerHTML = `<span>${clean}</span><button class="audio-btn text-indigo-500 p-2" onclick="event.stopPropagation(); speakDual('${current.kanji}')"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M14 5v14l-7-5H3v-4h4l7-5zm3.5 7c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg></button>`;
-                } else if (clean.match(/[\[\u4e00-\u9fa5]/) && !clean.includes('【')) {
-                    div.className = "text-3xl font-bold text-indigo-600 mb-8 mt-2";
-                    div.innerText = clean;
-                    div.onclick = () => flipToFront();
-                } else if (clean.includes('【例句】')) {
-                    const sent = clean.replace('【例句】', '').trim();
-                    div.className = "p-4 bg-slate-50 rounded-2xl mb-4 flex items-center justify-between gap-3 border border-slate-100 shadow-sm";
-                    div.innerHTML = `<p class="text-sm font-medium text-slate-700 leading-relaxed flex-1">${sent}</p><button class="audio-btn text-indigo-500 bg-white p-3 rounded-full shadow-sm" onclick="event.stopPropagation(); speakDual('${sent}')"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 5v14l-7-5H3v-4h4l7-5zm3.5 7c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg></button>`;
-                } else {
-                    div.className = "text-[11px] font-bold text-slate-400 uppercase mb-2 opacity-60";
-                    div.innerText = clean;
-                    div.onclick = () => flipToFront();
-                }
-                back.appendChild(div);
-            });
+        });
+    }
 
-            updateUI();
-            if (voiceEnabled) {
-                window.speechSynthesis.cancel();
-                setTimeout(() => speakDual(current.kanji), 1000);
-            }
-        }
+    // 組合背面完整內容
+    back.innerHTML = `
+        <div class="mb-4">
+            <h2 class="text-3xl font-black text-slate-800">${current.kanji}</h2>
+            <p class="text-indigo-600 font-bold text-lg">${current.yomi}</p>
+        </div>
+        
+        <div class="mb-6 p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+            <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">Meaning</span>
+            <p class="text-slate-700 font-bold">${current.meaning}</p>
+        </div>
+
+        <div class="mt-4">
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Example Sentences</span>
+            ${exampleHTML || '<p class="text-slate-300 italic text-sm">No examples available.</p>'}
+        </div>
+    `;
+
+        updateUI();
+    }
 
         /*function speakDual(text) {
             const t = text || activeQueue[0].kanji;
