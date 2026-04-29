@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J-Flash Pro V5.0</title>
+    <title>J-Flash Pro V5.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -20,8 +20,9 @@
 <body class="min-h-screen flex flex-col items-center p-4">
 
     <div id="init-overlay" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white p-6 text-center">
-        <h1 class="text-2xl font-black mb-8">J-Flash Pro V5</h1>
-        <button onclick="initApp()" class="bg-white text-indigo-600 px-12 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all">点击开始学习</button>
+        <h1 class="text-2xl font-black mb-8">J-Flash Pro V5.1</h1>
+        <p class="mb-6 opacity-80 text-sm">点击按钮以激活语音引擎并开始</p>
+        <button id="start-btn" class="bg-white text-indigo-600 px-12 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all">解锁并开始</button>
     </div>
 
     <div class="w-full max-w-md glass-panel p-4 rounded-3xl mb-4 flex items-center justify-between">
@@ -36,11 +37,11 @@
         </div>
     </div>
 
-    <div id="paste-area" class="fixed inset-0 z-40 bg-slate-900/95 p-6 hidden flex-col">
-        <textarea id="csv-text-input" class="flex-1 bg-slate-800 text-white p-4 rounded-xl mb-4 text-sm" placeholder="请在此处粘贴 CSV 文件内容..."></textarea>
+    <div id="paste-area" class="fixed inset-0 z-40 bg-slate-900/95 p-6 hidden flex flex-col">
+        <textarea id="csv-text-input" class="flex-1 bg-slate-800 text-white p-4 rounded-xl mb-4 text-sm" placeholder="粘贴内容..."></textarea>
         <div class="flex gap-4">
             <button onclick="hidePasteArea()" class="flex-1 py-3 bg-slate-600 rounded-xl font-bold">取消</button>
-            <button onclick="processPaste()" class="flex-1 py-3 bg-indigo-600 rounded-xl font-bold">确认导入</button>
+            <button onclick="processPaste()" class="flex-1 py-3 bg-indigo-600 rounded-xl font-bold">导入</button>
         </div>
     </div>
 
@@ -53,7 +54,7 @@
                     </div>
                     <div class="flex-1 flex flex-col items-center justify-center p-6 bg-white">
                         <div id="word-front" class="text-5xl font-black text-slate-800 mb-6">...</div>
-                        <button onclick="speakText(event)" class="w-16 h-16 rounded-full bg-indigo-50 text-indigo-500 flex items-center justify-center shadow-sm">
+                        <button onclick="speakCurrent(event)" class="w-16 h-16 rounded-full bg-indigo-50 text-indigo-500 flex items-center justify-center shadow-sm">
                             <i class="fas fa-volume-up text-2xl"></i>
                         </button>
                     </div>
@@ -74,37 +75,47 @@
     <script>
         let activeQueue = [];
         let totalCount = 0;
-        let japaneseVoice = null;
 
-        function initApp() {
-            window.speechSynthesis.getVoices();
+        // 强力解锁：解决手机浏览器无反应
+        document.getElementById('start-btn').addEventListener('click', function() {
+            const silent = new SpeechSynthesisUtterance('');
+            window.speechSynthesis.speak(silent);
             document.getElementById('init-overlay').classList.add('hidden');
             document.getElementById('main-container').classList.remove('hidden');
-            const saved = localStorage.getItem('jflash_v5');
+            
+            const saved = localStorage.getItem('jflash_v5_1');
             if (saved) {
                 const d = JSON.parse(saved);
                 activeQueue = d.activeQueue; totalCount = d.totalCount;
                 if (activeQueue.length > 0) renderCard();
             }
-        }
+        });
 
-        // CSV 解析核心
+        // 修正例句无法显示的问题：加强 CSV 处理
         function parseCSV(text) {
-            // 处理手机端换行符差异
             const items = [];
+            // 分割每一块 (以"第x课"开头)
             const blocks = text.split(/第\d+课/g);
             blocks.forEach(block => {
                 if (!block.trim()) return;
-                const lines = block.split('\n').map(l => l.replace(/^"|"$/g, '').trim()).filter(l => l);
-                // 第一个元素通常是单词，剩下的包含读音和详细内容
-                const wordPart = lines[0].split(',').filter(p => p.trim());
-                const word = wordPart[0];
+                
+                // 清理多余引号和换行符差异
+                const rawLines = block.split(/\r?\n/).map(l => l.trim().replace(/^"|"$/g, '')).filter(l => l);
+                if (rawLines.length < 2) return;
+
+                // 提取单词 (处理开头带逗号的情况)
+                const firstLineParts = rawLines[0].split(',').filter(p => p.trim());
+                const word = firstLineParts[0];
+
+                // 提取例句：寻找所有以数字开头的行
+                const examples = rawLines.filter(l => /^\d+\./.test(l));
+
                 if (word) {
                     items.push({
                         kanji: word,
-                        yomi: lines[1] || word,
-                        meaning: lines[2] || "",
-                        examples: lines.filter(l => /^\d+\./.test(l)),
+                        yomi: rawLines[1] || word,
+                        meaning: rawLines[2] || "详见例句",
+                        examples: examples,
                         full: block
                     });
                 }
@@ -112,6 +123,7 @@
             return items;
         }
 
+        // 文件导入逻辑
         document.getElementById('csv-input').addEventListener('change', (e) => {
             const file = e.target.files[0];
             const reader = new FileReader();
@@ -120,7 +132,7 @@
                 if (results.length > 0) {
                     activeQueue = results; totalCount = results.length;
                     saveProgress(); renderCard();
-                }
+                } else { alert("导入失败，请检查CSV格式"); }
             };
             reader.readAsText(file);
         });
@@ -133,7 +145,7 @@
             if (results.length > 0) {
                 activeQueue = results; totalCount = results.length;
                 saveProgress(); renderCard(); hidePasteArea();
-            } else { alert("内容格式不正确"); }
+            }
         }
 
         function renderCard() {
@@ -144,14 +156,14 @@
             
             const img = document.getElementById('card-image');
             img.style.opacity = '0';
-            img.src = `https://loremflickr.com/800/600/japan,culture?lock=${Math.random()}`;
+            img.src = `https://loremflickr.com/800/600/japan,nature?lock=${Math.random()}`;
             img.onload = () => img.style.opacity = '1';
 
             let exHTML = '';
             current.examples.forEach(ex => {
                 exHTML += `<div class="p-3 bg-slate-50 rounded-xl mb-2 flex justify-between items-center text-sm">
-                    <p class="flex-1">${ex}</p>
-                    <button class="text-indigo-500 ml-2" onclick="event.stopPropagation(); speak('${ex.replace(/^\d+\./,'')}')"><i class="fas fa-volume-up"></i></button>
+                    <p class="flex-1 text-slate-700 leading-relaxed">${ex}</p>
+                    <button class="text-indigo-500 ml-2 p-2" onclick="event.stopPropagation(); speak('${ex.replace(/^\d+\./,'')}')"><i class="fas fa-volume-up"></i></button>
                 </div>`;
             });
 
@@ -159,27 +171,26 @@
                 <div class="mb-4">
                     <div class="flex items-center gap-2">
                         <h2 class="text-3xl font-black">${current.kanji}</h2>
-                        <button class="text-indigo-500" onclick="event.stopPropagation(); speak('${current.kanji}')"><i class="fas fa-volume-up"></i></button>
+                        <button class="text-indigo-500 p-2" onclick="event.stopPropagation(); speak('${current.kanji}')"><i class="fas fa-volume-up"></i></button>
                     </div>
                     <p class="text-indigo-600 font-bold">${current.yomi}</p>
                 </div>
-                <div class="mb-4 p-3 bg-indigo-50 rounded-xl text-sm">${current.meaning}</div>
+                <div class="mb-4 p-3 bg-indigo-50 rounded-xl text-sm font-medium text-indigo-900 border border-indigo-100">${current.meaning}</div>
                 <div class="space-y-1">${exHTML}</div>
             `;
             updateUI();
-            setTimeout(() => speak(current.kanji), 500);
+            setTimeout(() => speak(current.kanji), 600);
         }
 
         function speak(t) {
             window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(t);
             u.lang = 'ja-JP';
-            const vs = window.speechSynthesis.getVoices();
-            u.voice = vs.find(v => v.lang.includes('ja')) || vs[0];
+            u.rate = 0.9;
             window.speechSynthesis.speak(u);
         }
 
-        function speakText(e) { e.stopPropagation(); speak(activeQueue[0].kanji); }
+        function speakCurrent(e) { e.stopPropagation(); speak(activeQueue[0].kanji); }
         function handleSRS(type, e) {
             e.stopPropagation();
             const c = activeQueue.shift();
@@ -191,7 +202,7 @@
 
         function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
         function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
-        function saveProgress() { localStorage.setItem('jflash_v5', JSON.stringify({ activeQueue, totalCount })); }
+        function saveProgress() { localStorage.setItem('jflash_v5_1', JSON.stringify({ activeQueue, totalCount })); }
         function updateUI() {
             const prog = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
             document.getElementById('progress-bar').style.width = prog + '%';
