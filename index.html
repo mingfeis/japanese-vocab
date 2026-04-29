@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J-Flash Pro V5.8 Final Fix</title>
+    <title>J-Flash Pro V5.9 Final</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -21,8 +21,8 @@
 <body class="min-h-screen flex flex-col items-center p-4">
 
     <div id="init-overlay" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white p-6 text-center">
-        <h1 class="text-3xl font-black mb-4 tracking-tighter">J-FLASH V5.8</h1>
-        <p class="mb-8 opacity-70">搭配/词性解析增强 & 强制男声</p>
+        <h1 class="text-3xl font-black mb-4 tracking-tighter">J-FLASH V5.9</h1>
+        <p class="mb-8 opacity-70">UI 优化、统一颜色 & 优质声音回归</p>
         <button id="start-btn" class="bg-white text-indigo-600 px-16 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all">解锁并进入学习</button>
     </div>
 
@@ -31,7 +31,7 @@
             <span id="progress-text" class="text-[10px] font-black text-indigo-300 uppercase">PROGRESS: 0/0</span>
             <div class="w-24 bg-white/10 h-1 rounded-full mt-1"><div id="progress-bar" class="bg-indigo-400 h-full w-0 transition-all"></div></div>
         </div>
-        <button onclick="document.getElementById('csv-input').click()" class="bg-indigo-500 text-white text-xs px-5 py-2 rounded-xl font-black shadow-lg">导入 CSV</button>
+        <button onclick="document.getElementById('csv-input').click()" class="bg-indigo-500 text-white text-xs px-5 py-2 rounded-xl font-black">导入词库</button>
         <input type="file" id="csv-input" accept=".csv" class="hidden">
     </div>
 
@@ -65,23 +65,22 @@
     <script>
         let activeQueue = [];
         let totalCount = 0;
-        let maleVoice = null;
+        let selectedVoice = null;
 
-        function findMaleVoice() {
+        function findBestVoice() {
             const vs = window.speechSynthesis.getVoices();
-            // 严选男声关键词
-            maleVoice = vs.find(v => v.lang.includes('ja') && (v.name.includes('Ichiro') || v.name.includes('Male') || v.name.includes('Ayumi'))) || 
-                        vs.find(v => v.lang.includes('ja') && v.name.includes('Nanami')) || 
-                        vs.find(v => v.lang.includes('ja')) || vs[0];
-            return maleVoice;
+            // 优先寻找 Google 日本语或优质女声
+            selectedVoice = vs.find(v => v.lang.includes('ja') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Nanami'))) || 
+                            vs.find(v => v.lang.includes('ja')) || vs[0];
         }
+        window.speechSynthesis.onvoiceschanged = findBestVoice;
 
         document.getElementById('start-btn').addEventListener('click', function() {
-            findMaleVoice();
+            findBestVoice();
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
             document.getElementById('init-overlay').classList.add('hidden');
             document.getElementById('main-container').classList.remove('hidden');
-            const saved = localStorage.getItem('jflash_v5_8');
+            const saved = localStorage.getItem('jflash_v5_9');
             if (saved) {
                 const d = JSON.parse(saved); activeQueue = d.activeQueue; totalCount = d.totalCount;
                 if (activeQueue.length > 0) renderCard();
@@ -118,11 +117,11 @@
                 const detail = row[2] ? row[2].trim() : "";
                 const lines = detail.split('\n').map(l => l.trim()).filter(l => l);
                 
-                // --- 深度提取逻辑 ---
-                const collocationLine = lines.find(l => l.includes('搭配词')) || "";
-                const inflectionLine = lines.find(l => l.includes('變化') || l.includes('变化')) || "";
+                // 提取逻辑：寻找包含关键词的行
+                const collocationLine = lines.find(l => l.includes('搭配词') || l.includes('搭配詞')) || "";
+                const inflectionLine = lines.find(l => l.includes('變化') || l.includes('变化') || l.includes('詞性')) || "";
                 
-                // 剔除已提取的行，剩下的作为纯释义或例句
+                // 释义逻辑：取第二行，或者不带特殊符号的第一行
                 const meaningLine = lines.find(l => !l.includes('[') && !l.includes('【') && !/^\d+\./.test(l)) || "";
                 const examples = lines.filter(l => /^\d+\./.test(l));
 
@@ -157,23 +156,23 @@
             
             const img = document.getElementById('card-image');
             img.style.opacity = '0';
-            img.src = `https://loremflickr.com/800/600/japan,culture?lock=${Math.random()}`;
+            img.src = `https://loremflickr.com/800/600/japan,zen?lock=${Math.random()}`;
             img.onload = () => img.style.opacity = '1';
 
-            // 高亮显示 搭配词 和 词性变化
-            let headerExtra = '';
+            // 统一使用 Indigo 浅色调作为“搭配”和“词性”的背景，避免黑色块视觉疲劳
+            let extraHTML = '';
             if (current.collocation) {
-                headerExtra += `<div class="mb-2 p-3 bg-orange-50 border border-orange-100 rounded-xl text-xs text-orange-900 font-black tracking-tight"><i class="fas fa-link mr-1"></i>${current.collocation}</div>`;
+                extraHTML += `<div class="mb-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-[13px] text-indigo-900 font-bold"><i class="fas fa-link mr-2 opacity-50"></i>${current.collocation}</div>`;
             }
             if (current.inflection) {
-                headerExtra += `<div class="mb-3 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-900 font-black tracking-tight"><i class="fas fa-sync-alt mr-1"></i>${current.inflection}</div>`;
+                extraHTML += `<div class="mb-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-[13px] text-indigo-900 font-bold"><i class="fas fa-layer-group mr-2 opacity-50"></i>${current.inflection}</div>`;
             }
 
             let exHTML = '';
             current.examples.forEach(ex => {
                 exHTML += `<div class="p-4 bg-slate-50 rounded-2xl mb-2 flex justify-between items-center border border-slate-100">
                     <p class="text-[13px] text-slate-700 leading-relaxed flex-1">${ex}</p>
-                    <button class="ml-3 text-indigo-500 bg-white w-10 h-10 rounded-full shadow-sm flex-shrink-0 flex items-center justify-center hover:bg-indigo-50" onclick="event.stopPropagation(); speak('${ex}')">
+                    <button class="ml-3 text-indigo-500 bg-white w-10 h-10 rounded-full shadow-sm flex-shrink-0 flex items-center justify-center" onclick="event.stopPropagation(); speak('${ex}')">
                         <i class="fas fa-volume-up"></i>
                     </button>
                 </div>`;
@@ -187,8 +186,8 @@
                     </div>
                     <p class="text-indigo-600 font-bold text-xl mt-1">${current.yomi}</p>
                 </div>
-                ${headerExtra}
-                <div class="mb-6 p-4 bg-slate-900 rounded-2xl text-white text-[13px] font-medium leading-relaxed border-l-4 border-indigo-400">
+                ${extraHTML}
+                <div class="mb-6 p-4 bg-white border border-slate-100 rounded-2xl text-[14px] text-slate-600 font-medium leading-relaxed italic">
                     ${current.meaning}
                 </div>
                 <div class="space-y-1">
@@ -204,17 +203,15 @@
             if (!t) return;
             window.speechSynthesis.cancel();
             
-            // 终极过滤：剔除所有全角（）和半角()内的内容，并去掉例句前面的数字
-            let cleanText = t.replace(/^\d+\.\s*/, '') // 去掉前面的数字
-                             .replace(/\（.*?\）|\(.*?\)|（.*?）/g, '') // 去掉所有括号及中文
-                             .replace(/【.*?】/g, ''); // 去掉书名号内容
+            // 过滤例句前的数字和括号中的中文
+            let cleanText = t.replace(/^\d+\.\s*/, '')
+                             .replace(/\（.*?\）|\(.*?\)|（.*?）/g, '')
+                             .replace(/【.*?】/g, '');
             
             const u = new SpeechSynthesisUtterance(cleanText);
-            const voice = findMaleVoice();
-            if (voice) u.voice = voice;
+            if (selectedVoice) u.voice = selectedVoice;
             u.lang = 'ja-JP';
-            u.rate = 1.0; 
-            u.pitch = 0.95; // 稍微降低音调，听感更厚重（偏男声）
+            u.rate = 0.92;
             window.speechSynthesis.speak(u);
         }
 
@@ -230,15 +227,12 @@
 
         function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
         function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
-        function saveProgress() { localStorage.setItem('jflash_v5_8', JSON.stringify({ activeQueue, totalCount })); }
+        function saveProgress() { localStorage.setItem('jflash_v5_9', JSON.stringify({ activeQueue, totalCount })); }
         function updateUI() {
             const prog = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
             document.getElementById('progress-bar').style.width = prog + '%';
             document.getElementById('progress-text').innerText = `Progress: ${totalCount - activeQueue.length} / ${totalCount}`;
         }
-        
-        // 初始确保声音加载
-        window.speechSynthesis.onvoiceschanged = findMaleVoice;
     </script>
 </body>
 </html>
