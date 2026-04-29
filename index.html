@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J-Flash Pro V6.8</title>
+    <title>J-Flash Pro V6.9 Final</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -15,13 +15,12 @@
         .front, .back { backface-visibility: hidden; position: absolute; inset: 0; border-radius: 2.5rem; overflow: hidden; }
         .back { transform: rotateY(180deg); background: #ffffff; color: #1e293b; }
         .front { background: #ffffff; color: #1e293b; cursor: pointer; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4">
 
     <div id="init-overlay" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white p-6 text-center">
-        <h1 class="text-3xl font-black mb-4 italic tracking-tighter">J-FLASH V6.8</h1>
+        <h1 class="text-3xl font-black mb-4 italic tracking-tighter">J-FLASH V6.9</h1>
         <button id="start-btn" class="bg-white text-indigo-600 px-16 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all">解锁并进入</button>
     </div>
 
@@ -32,7 +31,7 @@
                 <div id="progress-bar" class="bg-indigo-500 h-full w-0 transition-all"></div>
             </div>
         </div>
-        <button onclick="document.getElementById('csv-input').click()" class="bg-indigo-500 text-white text-xs px-5 py-2 rounded-xl font-black shadow-lg">导入 CSV</button>
+        <button onclick="document.getElementById('csv-input').click()" class="bg-indigo-500 text-white text-xs px-5 py-2 rounded-xl font-black">导入 CSV</button>
         <input type="file" id="csv-input" accept=".csv" class="hidden">
     </div>
 
@@ -80,14 +79,14 @@
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
             document.getElementById('init-overlay').classList.add('hidden');
             document.getElementById('main-container').classList.remove('hidden');
-            const saved = localStorage.getItem('jflash_v6_8');
+            const saved = localStorage.getItem('jflash_v6_9');
             if (saved) {
                 const d = JSON.parse(saved); activeQueue = d.activeQueue; totalCount = d.totalCount;
                 if (activeQueue.length > 0) renderCard();
             }
         });
 
-        // 强力解析器：按物理位置切分，解决重复显示问题
+        // 核心解析：使用正则全局清理
         function parseCSV(text) {
             const rows = [];
             let currentField = '', inQuotes = false, currentRow = [];
@@ -113,30 +112,28 @@
             return rows.filter(r => r[0] && r[0].includes('第')).map(row => {
                 const word = (row[1] || "").trim();
                 const detail = (row[2] || "").trim();
-                // 兼容所有类型的换行符
-                const allLines = detail.split(/\r?\n|\n/).map(l => l.trim()).filter(l => l);
+                const lines = detail.split(/\r?\n|\n/).map(l => l.trim()).filter(l => l);
                 
-                const collocation = allLines.find(l => l.includes('搭配')) || "";
-                const inflection = allLines.find(l => l.includes('變化') || l.includes('变化')) || "";
-                const examples = allLines.filter(l => /^\d+\./.test(l));
-
-                // 物理位置法：通常详情字段的前两行是重复的单词读音和定义，我们直接从第三行开始取释义
-                const cleanMeanings = allLines.filter(l => 
-                    !l.includes('搭配') && 
-                    !l.includes('变化') && 
-                    !l.includes('變化') && 
+                // 1. 抓取彩色板块
+                const collocation = lines.find(l => l.includes('搭配')) || "";
+                const inflection = lines.find(l => l.includes('變化') || l.includes('变化')) || "";
+                
+                // 2. 物理过滤引擎：只要包含 [ 或是包含重复单词，直接整行消失
+                // 特别针对 [名] [动] 等标签进行正则封杀
+                const cleanMeanings = lines.filter(l => 
+                    !l.includes('搭配') && !l.includes('变化') && !l.includes('變化') && 
                     !/^\d+\./.test(l) && 
-                    !l.includes('[') && // 绝对过滤词性行
-                    l !== word
+                    !l.includes('[') && 
+                    !l.includes(word) &&
+                    l.length > 1
                 );
 
                 return {
                     kanji: word,
-                    yomi: allLines.find(l => l.includes('[') && !l.includes('【')) || word,
-                    collocation: collocation,
-                    inflection: inflection,
+                    yomi: lines.find(l => l.includes('[') && !l.includes('【')) || word,
+                    collocation: collocation, inflection: inflection,
                     meaning: cleanMeanings.join(' / '),
-                    examples: examples
+                    examples: lines.filter(l => /^\d+\./.test(l))
                 };
             }).filter(item => item.kanji);
         }
@@ -159,23 +156,22 @@
             document.getElementById('card-inner').classList.remove('flipped');
             document.getElementById('word-front').innerText = current.kanji;
             
-            // --- 强制图片刷新 ---
+            // 更换更强随机性的接口
             const img = document.getElementById('card-image');
             img.style.opacity = '0';
-            // 使用多重随机因子强制浏览器不使用缓存图片
-            const forceRandom = Math.floor(Math.random() * 1000000);
-            img.src = `https://picsum.photos/seed/${forceRandom}/800/600`;
+            const randomID = Math.floor(Math.random() * 1084); // Picsum 有 1084 张预设图
+            img.src = `https://picsum.photos/id/${randomID}/800/600`;
             img.onload = () => img.style.opacity = '1';
 
             let tagsHTML = '';
             if (current.collocation) tagsHTML += `<div class="mb-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold">${current.collocation}</div>`;
-            if (current.inflection) tagsHTML += `<div class="mb-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold">${current.inflection}</div>`;
+            if (current.inflection) tagsHTML += `<div class="mb-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold">${current.inflection}</div>`;
             
-            let meaningContent = current.meaning ? `<div class="mb-6 p-4 bg-white border border-slate-100 rounded-2xl text-[14px] text-slate-600 font-medium shadow-sm italic border-l-4 border-indigo-400">${current.meaning}</div>` : '';
+            let meaningBox = current.meaning ? `<div class="mb-6 p-4 bg-white border border-slate-100 rounded-2xl text-[14px] text-slate-600 font-medium shadow-sm italic leading-relaxed border-l-4 border-indigo-400">${current.meaning}</div>` : '';
 
             let exHTML = '';
             current.examples.forEach(ex => {
-                exHTML += `<div class="p-4 bg-slate-50 rounded-2xl mb-2 flex justify-between items-center border border-slate-100 shadow-sm">
+                exHTML += `<div class="p-4 bg-slate-50 rounded-2xl mb-2 flex justify-between items-center border border-slate-100">
                     <p class="text-[13px] text-slate-700 leading-relaxed flex-1">${ex}</p>
                     <button class="ml-3 text-indigo-500 bg-white w-10 h-10 rounded-full shadow-sm flex items-center justify-center" onclick="event.stopPropagation(); speak('${ex}')">
                         <i class="fas fa-volume-up"></i>
@@ -192,7 +188,7 @@
                     <p class="text-indigo-600 font-bold text-xl mt-1">${current.yomi}</p>
                 </div>
                 ${tagsHTML}
-                ${meaningContent}
+                ${meaningBox}
                 <div class="space-y-1">
                     <span class="text-[10px] font-black text-slate-400 block mb-2 tracking-widest uppercase text-center">Practice Examples</span>
                     ${exHTML || '<p class="text-slate-300 italic text-center text-sm">No examples</p>'}
@@ -224,7 +220,7 @@
 
         function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
         function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
-        function saveProgress() { localStorage.setItem('jflash_v6_8', JSON.stringify({ activeQueue, totalCount })); }
+        function saveProgress() { localStorage.setItem('jflash_v6_9', JSON.stringify({ activeQueue, totalCount })); }
         function updateUI() {
             const prog = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
             document.getElementById('progress-bar').style.width = prog + '%';
