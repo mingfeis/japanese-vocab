@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J-Flash Pro V7.1 Final Clean</title>
+    <title>J-Flash Pro V7.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -21,7 +21,7 @@
 <body class="min-h-screen flex flex-col items-center p-4">
 
     <div id="init-overlay" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white p-6 text-center">
-        <h1 class="text-3xl font-black mb-4 italic tracking-tighter uppercase">J-Flash V7.1</h1>
+        <h1 class="text-3xl font-black mb-4 uppercase italic">J-Flash V7.2</h1>
         <button id="start-btn" class="bg-white text-indigo-600 px-16 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all">解锁并进入学习</button>
     </div>
 
@@ -41,7 +41,7 @@
             <div id="card-inner" class="flip-card-inner relative w-full">
                 <div class="front shadow-2xl flex flex-col" onclick="flipToBack()">
                     <div class="h-[45%] bg-slate-900 relative">
-                        <img id="card-image" class="w-full h-full object-cover opacity-0 transition-opacity duration-700" src="">
+                        <img id="card-image" class="w-full h-full object-cover opacity-0 transition-opacity duration-1000" src="">
                     </div>
                     <div class="flex-1 flex flex-col items-center justify-center p-6 bg-white text-center">
                         <div id="word-front" class="text-6xl font-black text-slate-800 mb-8 tracking-tighter">...</div>
@@ -80,7 +80,7 @@
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
             document.getElementById('init-overlay').classList.add('hidden');
             document.getElementById('main-container').classList.remove('hidden');
-            const saved = localStorage.getItem('jflash_v7_1');
+            const saved = localStorage.getItem('jflash_v7_2');
             if (saved) {
                 const d = JSON.parse(saved); activeQueue = d.activeQueue; totalCount = d.totalCount;
                 if (activeQueue.length > 0) renderCard();
@@ -99,7 +99,7 @@
                 } else {
                     if (char === '"') inQuotes = true;
                     else if (char === ',') { currentRow.push(currentField); currentField = ''; }
-                    else if (char === '\n' || char === '\r') {
+                    else if (char === '\n' || char char === '\r') {
                         if (currentField || currentRow.length > 0) {
                             currentRow.push(currentField); rows.push(currentRow);
                             currentRow = []; currentField = '';
@@ -114,26 +114,17 @@
                 const detail = (row[2] || "").trim();
                 const lines = detail.split(/\r?\n|\n/).map(l => l.trim()).filter(l => l);
                 
-                // 提取彩色标签
+                // 仅提取有特定标识的内容
                 const collocation = lines.find(l => l.includes('搭配')) || "";
-                const inflection = lines.find(l => l.includes('變化') || l.includes('变化')) || "";
-                
-                // 释义逻辑：寻找非标签、非例句、不含中括号的行
-                const cleanMeaning = lines.find(l => 
-                    !l.includes('【') && 
-                    !/^\d+\./.test(l) && 
-                    !l.includes('[') && 
-                    l !== word &&
-                    l.length > 1
-                ) || "";
+                const inflection = lines.find(l => l.includes('変化') || l.includes('变化') || l.includes('變化')) || "";
+                const examples = lines.filter(l => /^\d+\./.test(l));
 
                 return {
                     kanji: word,
                     yomi: lines.find(l => l.includes('[') && !l.includes('【')) || word,
                     collocation: collocation,
                     inflection: inflection,
-                    meaning: cleanMeaning,
-                    examples: lines.filter(l => /^\d+\./.test(l))
+                    examples: examples
                 };
             }).filter(item => item.kanji);
         }
@@ -162,17 +153,14 @@
             img.src = `https://picsum.photos/id/${randomID}/800/600`;
             img.onload = () => img.style.opacity = '1';
 
-            // 背面布局：物理切除中间栏位
-            let extraHTML = '';
-            if (current.collocation) extraHTML += `<div class="mb-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold">${current.collocation}</div>`;
-            if (current.inflection) extraHTML += `<div class="mb-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold">${current.inflection}</div>`;
-            
-            // 释义行：直接显示，不带任何白方块背景
-            let meaningHTML = current.meaning ? `<div class="mb-6 py-3 border-b border-slate-100 text-[15px] text-slate-500 font-medium leading-relaxed italic">${current.meaning}</div>` : '';
+            // 背面：只保留标题、标签和例句。彻底不提取详情中的“第一行”
+            let tagsHTML = '';
+            if (current.collocation) tagsHTML += `<div class="mb-3 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl text-sm text-indigo-900 font-bold shadow-sm">${current.collocation}</div>`;
+            if (current.inflection) tagsHTML += `<div class="mb-3 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl text-sm text-indigo-900 font-bold shadow-sm">${current.inflection}</div>`;
 
             let exHTML = '';
             current.examples.forEach(ex => {
-                exHTML += `<div class="p-4 bg-slate-50 rounded-2xl mb-2 flex justify-between items-center border border-slate-100">
+                exHTML += `<div class="p-4 bg-slate-50 rounded-2xl mb-2 flex justify-between items-center border border-slate-100 shadow-sm">
                     <p class="text-[13px] text-slate-700 leading-relaxed flex-1">${ex}</p>
                     <button class="ml-3 text-indigo-500 bg-white w-10 h-10 rounded-full shadow-sm flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation(); speak('${ex}')">
                         <i class="fas fa-volume-up"></i>
@@ -181,18 +169,19 @@
             });
 
             document.getElementById('back-content').innerHTML = `
-                <div class="mb-6">
-                    <div class="flex items-center gap-3">
+                <div class="mb-8">
+                    <div class="flex items-center gap-4">
                         <h2 class="text-4xl font-black text-slate-800 tracking-tighter">${current.kanji}</h2>
                         <button class="text-indigo-500 bg-indigo-50 p-3 rounded-full" onclick="event.stopPropagation(); speak('${current.kanji}')"><i class="fas fa-volume-up text-xl"></i></button>
                     </div>
-                    <p class="text-indigo-600 font-bold text-xl mt-1">${current.yomi}</p>
+                    <p class="text-indigo-600 font-bold text-xl mt-1 tracking-tight">${current.yomi}</p>
                 </div>
-                ${extraHTML}
-                ${meaningHTML}
-                <div class="space-y-1">
-                    <span class="text-[10px] font-black text-slate-400 block mb-2 tracking-widest uppercase text-center">Practice Sentences</span>
-                    ${exHTML || '<p class="text-slate-300 italic text-center text-sm">No examples</p>'}
+                <div class="space-y-2">
+                    ${tagsHTML}
+                </div>
+                <div class="space-y-1 mt-8">
+                    <span class="text-[10px] font-black text-slate-400 block mb-3 tracking-widest uppercase text-center">Practice Examples</span>
+                    ${exHTML || '<p class="text-slate-300 italic text-center text-sm">No examples found</p>'}
                 </div>
             `;
             updateUI();
@@ -221,7 +210,7 @@
 
         function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
         function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
-        function saveProgress() { localStorage.setItem('jflash_v7_1', JSON.stringify({ activeQueue, totalCount })); }
+        function saveProgress() { localStorage.setItem('jflash_v7_2', JSON.stringify({ activeQueue, totalCount })); }
         function updateUI() {
             const prog = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
             document.getElementById('progress-bar').style.width = prog + '%';
