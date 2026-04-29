@@ -101,25 +101,42 @@
             }
         }
 
-        document.getElementById('csv-input').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const text = event.target.result;
-                const rawLines = text.split(/\r?\n/);
-                activeQueue = []; let temp = null;
-                rawLines.forEach(line => {
-                    let row = line.trim().replace(/^"+|"+$/g, ''); if (!row) return;
-                    if (row.match(/^第\d+课/)) {
-                        const pts = row.split(',');
-                        temp = { kanji: (pts[pts.length > 2 ? 2 : 1] || "").replace(/"/g, '').trim(), content: row };
-                        activeQueue.push(temp);
-                    } else if (temp) { temp.content += "\n" + row; }
+        // 1. 找到處理檔案上傳的這一段
+    document.getElementById('csv-input').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+    
+        reader.onload = (event) => {
+        const text = event.target.result;
+        // 將文本按行分割
+        const lines = text.split(/\r?\n/);
+        activeQueue = []; // 清空目前的隊列
+
+        lines.forEach(line => {
+            // 使用逗號分割每一行
+            const parts = line.split(',');
+
+            // 核心修改部分插入於此：
+            if (parts.length >= 3) { 
+                activeQueue.push({
+                    kanji: parts[0].trim(),   // 第1欄：單字（漢字）
+                    yomi: parts[1].trim(),    // 第2欄：假名/音調
+                    meaning: parts[2].trim(), // 第3欄：中文意思
+                    // --- 這裡就是您問的那段代碼 ---
+                    // 從第 4 欄 (index 3) 開始，切下所有剩餘內容存入陣列
+                    examples: parts.slice(3).map(ex => ex.trim()).filter(ex => ex !== "") 
                 });
-                if (activeQueue.length > 0) { totalCount = activeQueue.length; saveProgress(); renderCard(); }
-            };
-            reader.readAsText(file);
+            }
         });
+
+            if (activeQueue.length > 0) {
+                totalCount = activeQueue.length;
+                saveProgress(); 
+                renderCard(); // 開始渲染第一張卡片
+            }
+        };
+        reader.readAsText(file);
+    });
 
         function renderCard() {
             if (activeQueue.length === 0) return;
@@ -138,6 +155,21 @@
             current.content.split('\n').forEach((line, i) => {
                 let clean = line.trim().replace(/^"+|"+$/g, '').replace(/\[\d+(?:,\s*\d+)*\]$/, '').replace(/"/g, '').trim();
                 if (!clean) return;
+
+                // 在 renderCard() 內部生成例句列表
+            let exampleHTML = '';
+            if (current.examples && current.examples.length > 0) {
+                current.examples.forEach(ex => {
+                    exampleHTML += `
+                    <div class="example-item flex items-center justify-between p-2 mb-2 bg-slate-50 rounded-lg border border-slate-100">
+                    <p class="text-sm text-slate-700">${ex}</p>
+                    <button class="audio-btn p-2 text-blue-500" onclick="event.stopPropagation(); speak('${ex}')">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 5v14l-7-5H3v-4h4l7-5zm3.5 7c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+                    </button>
+                </div>`;
+            });
+            }
+// 然後將 exampleHTML 插入到卡片背面的容器中
                 const div = document.createElement('div');
                 if (i === 0) {
                     div.className = "text-2xl font-black mb-4 pb-2 border-b-2 text-slate-800 flex justify-between items-center";
