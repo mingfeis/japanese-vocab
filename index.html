@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J-Flash Pro V6.7 Final</title>
+    <title>J-Flash Pro V6.8</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -21,7 +21,7 @@
 <body class="min-h-screen flex flex-col items-center p-4">
 
     <div id="init-overlay" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white p-6 text-center">
-        <h1 class="text-3xl font-black mb-4 italic tracking-tighter">J-FLASH V6.7</h1>
+        <h1 class="text-3xl font-black mb-4 italic tracking-tighter">J-FLASH V6.8</h1>
         <button id="start-btn" class="bg-white text-indigo-600 px-16 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all">解锁并进入</button>
     </div>
 
@@ -41,7 +41,7 @@
             <div id="card-inner" class="flip-card-inner relative w-full">
                 <div class="front shadow-2xl flex flex-col" onclick="flipToBack()">
                     <div class="h-[45%] bg-slate-900 relative">
-                        <img id="card-image" class="w-full h-full object-cover opacity-0 transition-opacity duration-1000" src="">
+                        <img id="card-image" class="w-full h-full object-cover opacity-0 transition-opacity duration-700" src="">
                     </div>
                     <div class="flex-1 flex flex-col items-center justify-center p-6 bg-white text-center">
                         <div id="word-front" class="text-6xl font-black text-slate-800 mb-8 tracking-tighter">...</div>
@@ -53,10 +53,10 @@
                 <div class="back shadow-2xl flex flex-col p-6 overflow-hidden">
                     <div id="back-content" class="flex-1 overflow-y-auto no-scrollbar" onclick="flipToFront()"></div>
                     <div class="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-slate-100">
-                        <button onclick="handleSRS('again', event)" class="py-4 bg-rose-50 text-rose-500 rounded-2xl text-[10px] font-black">AGAIN</button>
-                        <button onclick="handleSRS('hard', event)" class="py-4 bg-amber-50 text-amber-600 rounded-2xl text-[10px] font-black">HARD</button>
-                        <button onclick="handleSRS('good', event)" class="py-4 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-black">GOOD</button>
-                        <button onclick="handleSRS('easy', event)" class="py-4 bg-sky-50 text-sky-600 rounded-2xl text-[10px] font-black">EASY</button>
+                        <button onclick="handleSRS('again', event)" class="py-4 bg-rose-50 text-rose-500 rounded-2xl text-[10px] font-black uppercase">Again</button>
+                        <button onclick="handleSRS('hard', event)" class="py-4 bg-amber-50 text-amber-600 rounded-2xl text-[10px] font-black uppercase">Hard</button>
+                        <button onclick="handleSRS('good', event)" class="py-4 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-black uppercase">Good</button>
+                        <button onclick="handleSRS('easy', event)" class="py-4 bg-sky-50 text-sky-600 rounded-2xl text-[10px] font-black uppercase">Easy</button>
                     </div>
                 </div>
             </div>
@@ -80,14 +80,14 @@
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
             document.getElementById('init-overlay').classList.add('hidden');
             document.getElementById('main-container').classList.remove('hidden');
-            const saved = localStorage.getItem('jflash_v6_7');
+            const saved = localStorage.getItem('jflash_v6_8');
             if (saved) {
                 const d = JSON.parse(saved); activeQueue = d.activeQueue; totalCount = d.totalCount;
                 if (activeQueue.length > 0) renderCard();
             }
         });
 
-        // 终极提取逻辑：不再过滤，直接只取我们要的东西
+        // 强力解析器：按物理位置切分，解决重复显示问题
         function parseCSV(text) {
             const rows = [];
             let currentField = '', inQuotes = false, currentRow = [];
@@ -113,30 +113,29 @@
             return rows.filter(r => r[0] && r[0].includes('第')).map(row => {
                 const word = (row[1] || "").trim();
                 const detail = (row[2] || "").trim();
-                const lines = detail.split(/\r?\n|\n/).map(l => l.trim()).filter(l => l);
+                // 兼容所有类型的换行符
+                const allLines = detail.split(/\r?\n|\n/).map(l => l.trim()).filter(l => l);
                 
-                // 1. 独立抓取标签
-                const collocation = lines.find(l => l.includes('搭配')) || "";
-                const inflection = lines.find(l => l.includes('變化') || l.includes('变化')) || "";
-                
-                // 2. 物理提取例句
-                const examples = lines.filter(l => /^\d+\./.test(l));
+                const collocation = allLines.find(l => l.includes('搭配')) || "";
+                const inflection = allLines.find(l => l.includes('變化') || l.includes('变化')) || "";
+                const examples = allLines.filter(l => /^\d+\./.test(l));
 
-                // 3. 释义：只保留不含特殊符号、且不是单词本身、且不是例句的“干净”文本
-                const cleanMeanings = lines.filter(l => 
-                    !l.includes('[') && 
-                    !l.includes('【') && 
+                // 物理位置法：通常详情字段的前两行是重复的单词读音和定义，我们直接从第三行开始取释义
+                const cleanMeanings = allLines.filter(l => 
+                    !l.includes('搭配') && 
+                    !l.includes('变化') && 
+                    !l.includes('變化') && 
                     !/^\d+\./.test(l) && 
-                    l !== word &&
-                    l.length > 1
+                    !l.includes('[') && // 绝对过滤词性行
+                    l !== word
                 );
 
                 return {
                     kanji: word,
-                    yomi: lines.find(l => l.includes('[') && !l.includes('【')) || word,
+                    yomi: allLines.find(l => l.includes('[') && !l.includes('【')) || word,
                     collocation: collocation,
                     inflection: inflection,
-                    meaning: cleanMeanings[0] || "", // 只取第一条最干净的释义
+                    meaning: cleanMeanings.join(' / '),
                     examples: examples
                 };
             }).filter(item => item.kanji);
@@ -160,22 +159,23 @@
             document.getElementById('card-inner').classList.remove('flipped');
             document.getElementById('word-front').innerText = current.kanji;
             
+            // --- 强制图片刷新 ---
             const img = document.getElementById('card-image');
             img.style.opacity = '0';
-            const randomSeed = Math.random(); // 物理强制变化
-            img.src = `https://loremflickr.com/800/600/japan,zen,landscape?lock=${randomSeed}`;
+            // 使用多重随机因子强制浏览器不使用缓存图片
+            const forceRandom = Math.floor(Math.random() * 1000000);
+            img.src = `https://picsum.photos/seed/${forceRandom}/800/600`;
             img.onload = () => img.style.opacity = '1';
 
-            // 背面布局：只显示明确提取出的内容
             let tagsHTML = '';
             if (current.collocation) tagsHTML += `<div class="mb-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold">${current.collocation}</div>`;
             if (current.inflection) tagsHTML += `<div class="mb-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold">${current.inflection}</div>`;
             
-            let meaningContent = current.meaning ? `<div class="mb-6 p-4 bg-white border border-slate-100 rounded-2xl text-[14px] text-slate-600 font-medium shadow-sm leading-relaxed italic border-l-4 border-indigo-400">${current.meaning}</div>` : '';
+            let meaningContent = current.meaning ? `<div class="mb-6 p-4 bg-white border border-slate-100 rounded-2xl text-[14px] text-slate-600 font-medium shadow-sm italic border-l-4 border-indigo-400">${current.meaning}</div>` : '';
 
             let exHTML = '';
             current.examples.forEach(ex => {
-                exHTML += `<div class="p-4 bg-slate-50 rounded-2xl mb-2 flex justify-between items-center border border-slate-100">
+                exHTML += `<div class="p-4 bg-slate-50 rounded-2xl mb-2 flex justify-between items-center border border-slate-100 shadow-sm">
                     <p class="text-[13px] text-slate-700 leading-relaxed flex-1">${ex}</p>
                     <button class="ml-3 text-indigo-500 bg-white w-10 h-10 rounded-full shadow-sm flex items-center justify-center" onclick="event.stopPropagation(); speak('${ex}')">
                         <i class="fas fa-volume-up"></i>
@@ -205,7 +205,6 @@
         function speak(t) {
             if (!t) return;
             window.speechSynthesis.cancel();
-            // 彻底过滤括号内的翻译
             let clean = t.replace(/^\d+\.\s*/, '').replace(/\（.*?\）|\(.*?\)|（.*?）/g, '').replace(/【.*?】/g, '');
             const u = new SpeechSynthesisUtterance(clean);
             if (femaleVoice) u.voice = femaleVoice;
@@ -225,7 +224,7 @@
 
         function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
         function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
-        function saveProgress() { localStorage.setItem('jflash_v6_7', JSON.stringify({ activeQueue, totalCount })); }
+        function saveProgress() { localStorage.setItem('jflash_v6_8', JSON.stringify({ activeQueue, totalCount })); }
         function updateUI() {
             const prog = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
             document.getElementById('progress-bar').style.width = prog + '%';
