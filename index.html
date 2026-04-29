@@ -3,52 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J-Flash Vocab V5.6 (CSV适配版)</title>
+    <title>J-Flash Pro V4.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
-        body { font-family: 'Noto Sans JP', sans-serif; background: #0f172a; color: #f1f5f9; touch-action: manipulation; }
+        body { font-family: 'Noto Sans JP', sans-serif; background: #0f172a; color: #f1f5f9; touch-action: manipulation; overflow: hidden; }
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .flip-card-inner { transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; height: 600px; }
+        .flip-card-inner { transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; height: 580px; }
         .flipped { transform: rotateY(180deg); }
-        .front, .back { backface-visibility: hidden; position: absolute; inset: 0; border-radius: 2.5rem; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
-        .front { background: #ffffff; color: #1e293b; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .back { transform: rotateY(180deg); background: #ffffff; color: #1e293b; display: flex; flex-direction: column; padding: 1.5rem; }
+        .front, .back { backface-visibility: hidden; position: absolute; inset: 0; border-radius: 2.5rem; overflow: hidden; }
+        .back { transform: rotateY(180deg); background: #ffffff; color: #1e293b; }
+        .front { background: #ffffff; color: #1e293b; cursor: pointer; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .audio-btn { transition: all 0.2s; -webkit-tap-highlight-color: transparent; }
-        .audio-btn:active { transform: scale(0.85); background-color: rgba(99, 102, 241, 0.1); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4">
 
-    <div class="w-full max-w-md glass-panel p-4 rounded-3xl mb-6 flex items-center justify-between">
-        <div class="flex flex-col gap-1">
-            <span id="progress-text" class="text-xs font-bold text-white opacity-70 tracking-widest">0 / 0</span>
-            <div class="w-32 bg-white/10 h-1.5 rounded-full overflow-hidden">
-                <div id="progress-bar" class="bg-indigo-400 h-full w-0 transition-all duration-500"></div>
+    <div id="init-overlay" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white p-6 text-center">
+        <div class="mb-6 relative">
+            <div class="w-24 h-24 bg-white/20 rounded-full animate-ping absolute inset-0"></div>
+            <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center relative shadow-2xl">
+                <i class="fas fa-play text-indigo-600 text-3xl ml-1"></i>
             </div>
         </div>
-        <label class="text-indigo-400 font-bold text-[10px] bg-white/5 px-4 py-2 rounded-xl border border-white/10 uppercase cursor-pointer">
-            <span>Import CSV</span><input type="file" id="csv-input" accept=".csv" class="hidden">
+        <button onclick="initApp()" class="bg-white text-indigo-600 px-14 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all tracking-widest text-sm uppercase">解锁并开始</button>
+    </div>
+
+    <div class="w-full max-w-md glass-panel p-4 rounded-3xl mb-6 flex items-center justify-between">
+        <div class="flex flex-col gap-1">
+            <span id="progress-text" class="text-xs font-bold text-white tracking-widest">0 / 0</span>
+            <div class="w-32 bg-white/10 h-1.5 rounded-full overflow-hidden">
+                <div id="progress-bar" class="bg-indigo-500 h-full w-0 transition-all duration-500"></div>
+            </div>
+        </div>
+        <label class="text-indigo-400 hover:text-indigo-300 cursor-pointer transition flex items-center gap-2 bg-indigo-500/10 px-4 py-2 rounded-xl border border-indigo-500/20 shadow-sm">
+            <i class="fas fa-plus-circle"></i>
+            <span class="text-[10px] font-black uppercase">导入 CSV</span>
+            <input type="file" id="csv-input" accept=".csv" class="hidden">
         </label>
     </div>
 
-    <div id="main-container" class="w-full max-w-md">
-        <div class="relative w-full" style="height: 600px;">
+    <div id="main-container" class="w-full max-w-md hidden">
+        <div class="relative w-full" style="height: 580px;">
             <div id="card-inner" class="flip-card-inner relative w-full">
-                <div class="front p-8 shadow-2xl" onclick="flipToBack()">
-                    <div class="text-indigo-500 font-bold mb-4 uppercase tracking-widest text-xs">Vocabulary</div>
-                    <div id="word-front" class="text-6xl font-black text-slate-800 mb-8 text-center tracking-tighter">...</div>
-                    <div class="text-slate-300 text-sm animate-pulse">Tap to see details</div>
+                <div class="front flex flex-col shadow-2xl" onclick="flipToBack()">
+                    <div class="w-full h-[55%] bg-slate-900 overflow-hidden relative">
+                        <img id="card-image-front" class="w-full h-full object-cover opacity-0 transition-opacity duration-700" src="">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center justify-center p-6 bg-white">
+                        <div id="word-front" class="text-6xl font-black text-slate-800 mb-6 text-center leading-tight tracking-tighter">...</div>
+                        <button onclick="speakText(event)" class="text-indigo-500 p-5 rounded-full bg-indigo-50 hover:bg-indigo-100 active:scale-90 transition-all shadow-sm">
+                            <i class="fas fa-volume-up text-3xl"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="back shadow-2xl p-6 border-t-8 border-indigo-500">
-                    <div id="word-back-content" class="flex-1 overflow-y-auto no-scrollbar pr-1 text-sm">
+
+                <div class="back shadow-2xl flex flex-col p-8 overflow-hidden border-t-8 border-indigo-500">
+                    <div id="word-back-content" class="flex-1 overflow-y-auto no-scrollbar mb-4 text-slate-700" onclick="flipToFront()">
                         </div>
-                    <div class="grid grid-cols-4 gap-2 pt-4 border-t border-slate-100 mt-2">
-                        <button onclick="handleSRS('again', event)" class="py-4 bg-rose-50 text-rose-500 rounded-2xl font-black text-[10px]">AGAIN</button>
-                        <button onclick="handleSRS('hard', event)" class="py-4 bg-amber-50 text-amber-600 rounded-2xl font-black text-[10px]">HARD</button>
-                        <button onclick="handleSRS('good', event)" class="py-4 bg-emerald-50 text-emerald-600 rounded-2xl font-black text-[10px]">GOOD</button>
-                        <button onclick="handleSRS('easy', event)" class="py-4 bg-sky-50 text-sky-600 rounded-2xl font-black text-[10px]">EASY</button>
+                    <div class="grid grid-cols-4 gap-2 pt-4 border-t border-slate-100 flex-shrink-0">
+                        <button onclick="handleSRS('again', event)" class="py-4 bg-rose-50 text-rose-500 rounded-2xl font-black text-[10px] uppercase">Again</button>
+                        <button onclick="handleSRS('hard', event)" class="py-4 bg-amber-50 text-amber-600 rounded-2xl font-black text-[10px] uppercase">Hard</button>
+                        <button onclick="handleSRS('good', event)" class="py-4 bg-emerald-50 text-emerald-600 rounded-2xl font-black text-[10px] uppercase">Good</button>
+                        <button onclick="handleSRS('easy', event)" class="py-4 bg-sky-50 text-sky-600 rounded-2xl font-black text-[10px] uppercase">Easy</button>
                     </div>
                 </div>
             </div>
@@ -58,147 +77,142 @@
     <script>
         let activeQueue = [];
         let totalCount = 0;
+        let voiceEnabled = false;
+        let japaneseVoice = null;
 
-        // 修改 CSV 解析部分的代码
-document.getElementById('csv-input').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        const text = event.target.result;
-        
-        // 使用高级正则：支持带引号的多行内容解析
-        const rows = text.match(/(".*?"|[^",\r\n]+)(?=\s*,|\s*\r?\n|$)/gs) || [];
-        activeQueue = [];
-
-        // 探测 CSV 类型逻辑
-        // 如果第一行前两列看起来像 "第13课", "きっかけ"，则是最新版格式
-        const isNewFormatWithLesson = rows[0]?.includes("第") && rows[0]?.includes("课");
-
-        if (isNewFormatWithLesson) {
-            // 模式 A: 兼容最新引号版 (课次, 单词, 详细内容)
-            for (let i = 0; i < rows.length; i += 3) {
-                const word = rows[i+1]?.replace(/^"|"$/g, '').trim();
-                const rawContent = rows[i+2]?.replace(/^"|"$/g, '').trim();
-                if (word && rawContent) {
-                    const lines = rawContent.split('\n');
-                    const exampleLines = lines.filter(l => /^\d+\./.test(l.trim()));
-                    activeQueue.push({
-                        kanji: word,
-                        yomi: lines.find(l => l.includes('[') && !l.includes('【')) || word,
-                        meaning: lines[0],
-                        examples: exampleLines,
-                        fullContent: rawContent
-                    });
-                }
-            }
-        } else {
-            // 模式 B: 兼容以前所有的标准 CSV 格式
-            // 重新按行处理，避免正则干扰
-            const lineArray = text.split(/\r?\n/);
-            lineArray.forEach(line => {
-                const parts = line.split(',');
-                if (parts.length >= 3) {
-                    activeQueue.push({
-                        kanji: parts[0].trim(),
-                        yomi: parts[1].trim(),
-                        meaning: parts[2].trim(),
-                        // 自动抓取后面所有的列作为例句 (兼容1句或多句)
-                        examples: parts.slice(3).map(ex => ex.trim()).filter(ex => ex !== ""),
-                        fullContent: "" 
-                    });
-                }
-            });
-        }
-
-        if (activeQueue.length > 0) {
-            totalCount = activeQueue.length;
-            saveProgress(); 
-            renderCard();
-        }
-    };
-    reader.readAsText(file);
-});
-
-function renderCard() {
-    if (activeQueue.length === 0) return;
-    const current = activeQueue[0]; [cite: 12]
-    document.getElementById('card-inner').classList.remove('flipped');
-
-    // --- 1. 处理正面内容 (恢复图片 + 单词发音) ---
-    // 假设图片存储在 current.image 字段中；如果是标准格式，通常是 parts 的某一项
-    const imageHTML = current.image ? 
-        `<img src="${current.image}" class="max-h-32 mx-auto mb-4 rounded-lg shadow-sm">` : '';
-
-    document.getElementById('word-front').innerHTML = `
-        ${imageHTML}
-        <div class="flex items-center justify-center gap-3">
-            <span class="text-4xl font-bold">${current.kanji}</span>
-            <button class="text-indigo-500 hover:text-indigo-700" onclick="event.stopPropagation(); speak('${current.kanji}')">
-                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M14 5v14l-7-5H3v-4h4l7-5zm3.5 7c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
-            </button>
-        </div>
-    `;
-
-    // --- 2. 准备例句 HTML ---
-    let exampleHTML = '';
-    current.examples.forEach(ex => { [cite: 13]
-        exampleHTML += `
-            <div class="p-3 bg-slate-50 rounded-xl mb-2 flex items-start justify-between gap-2 border border-slate-100">
-                <p class="text-[13px] text-slate-600 flex-1 leading-relaxed">${ex}</p>
-                <button class="audio-btn text-indigo-500 bg-white p-2 rounded-full shadow-sm flex-shrink-0" onclick="event.stopPropagation(); speak('${ex}')">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M14 5v14l-7-5H3v-4h4l7-5zm3.5 7c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg> [cite: 14]
-                </button>
-            </div>`;
-    });
-
-    // --- 3. 处理背面布局 (增加单词发音) ---
-    const detailsDisplay = current.fullContent 
-        ? `<div class="mb-4 whitespace-pre-wrap text-slate-600 border-l-4 border-indigo-100 pl-3">${current.fullContent.split('【例句】')[0]}</div>` [cite: 16]
-        : `<div class="mb-6 p-4 bg-indigo-50 rounded-2xl border border-indigo-100"><p class="text-slate-700 font-bold">${current.meaning}</p></div>`; [cite: 16]
-
-    document.getElementById('word-back-content').innerHTML = `
-        <div class="mb-4">
-            <div class="flex items-center gap-3">
-                <h2 class="text-3xl font-black text-slate-800">${current.kanji}</h2>
-                <button class="text-indigo-500" onclick="event.stopPropagation(); speak('${current.kanji}')">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 5v14l-7-5H3v-4h4l7-5zm3.5 7c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
-                </button>
-            </div>
-            <p class="text-indigo-600 font-bold">${current.yomi}</p> [cite: 17]
-        </div>
-        ${detailsDisplay}
-        <div class="mt-2">
-            <span class="text-[10px] font-black text-slate-400 uppercase block mb-2 tracking-widest">Sentences</span>
-            ${exampleHTML || '<p class="text-slate-300 italic text-sm text-center">No examples</p>'} [cite: 18]
-        </div>
-    `;
-    updateUI();
-}
-        function speak(text) {
-            window.speechSynthesis.cancel();
-            // 过滤掉数字序号、中文括号内容
-            const cleanText = text.replace(/^\d+\./, '').replace(/（[^）]+）/g, '').replace(/\([^)]+\)/g, '');
-            const utter = new SpeechSynthesisUtterance(cleanText);
-            utter.lang = 'ja-JP';
+        function loadVoices() {
             const vs = window.speechSynthesis.getVoices();
-            const voice = vs.find(v => v.name.includes('Voice 3')) || vs.find(v => v.lang === 'ja-JP');
-            if (voice) utter.voice = voice;
+            japaneseVoice = vs.find(v => v.lang.includes('ja')) || vs.find(v => v.lang.includes('jp')) || vs[0];
+        }
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+
+        function initApp() {
+            window.speechSynthesis.cancel(); loadVoices(); voiceEnabled = true;
+            document.getElementById('init-overlay').classList.add('hidden');
+            document.getElementById('main-container').classList.remove('hidden');
+            const saved = localStorage.getItem('jflash_v4');
+            if (saved) {
+                const d = JSON.parse(saved); activeQueue = d.activeQueue; totalCount = d.totalCount;
+                if (activeQueue.length > 0) renderCard();
+            }
+        }
+
+        document.getElementById('csv-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const text = event.target.result;
+                // 高级正则：支持带引号的多行内容解析 
+                const cells = text.match(/(".*?"|[^",\r\n]+)(?=\s*,|\s*\r?\n|$)/gs) || [];
+                const rows = [];
+                // 每3个cell为一组 (课次, 单词, 详细内容) [cite: 20, 21]
+                for (let i = 0; i < cells.length; i += 3) {
+                    const word = (cells[i+1] || "").replace(/^"|"$/g, '').trim();
+                    const rawContent = (cells[i+2] || "").replace(/^"|"$/g, '').trim();
+                    if (word && rawContent) {
+                        const lines = rawContent.split('\n');
+                        rows.push({
+                            kanji: word,
+                            yomi: lines.find(l => l.includes('[') && !l.includes('【')) || word,
+                            meaning: lines[1] || lines[0],
+                            examples: lines.filter(l => /^\d+\./.test(l.trim())),
+                            fullContent: rawContent
+                        });
+                    }
+                }
+                if (rows.length > 0) {
+                    activeQueue = rows;
+                    totalCount = rows.length;
+                    saveProgress();
+                    renderCard();
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        function renderCard() {
+            if (activeQueue.length === 0) { 
+                localStorage.removeItem('jflash_v4'); 
+                alert("恭喜！学习完成。");
+                location.reload(); 
+                return; 
+            }
+            const current = activeQueue[0];
+            document.getElementById('card-inner').classList.remove('flipped');
+            
+            // 正面内容渲染 [cite: 30]
+            document.getElementById('word-front').innerText = current.kanji;
+            const img = document.getElementById('card-image-front');
+            img.style.opacity = '0';
+            // 使用 loremflickr 提供更稳定的日本风格图片 
+            const kw = current.kanji.replace(/[^\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/g, '');
+            img.src = `https://loremflickr.com/800/600/japan,${encodeURIComponent(kw || 'culture')}?lock=${Math.floor(Math.random()*1000)}`;
+            img.onload = () => img.style.opacity = '1';
+
+            // 背面内容渲染 [cite: 33, 35]
+            const back = document.getElementById('word-back-content');
+            let exampleHTML = '';
+            current.examples.forEach(ex => {
+                exampleHTML += `
+                    <div class="p-3 bg-slate-50 rounded-xl mb-2 flex items-start justify-between gap-2 border border-slate-100">
+                        <p class="text-[13px] text-slate-600 flex-1 leading-relaxed">${ex}</p>
+                        <button class="text-indigo-500 p-2" onclick="event.stopPropagation(); speakText(event, '${ex.replace(/^\d+\./, '')}')">
+                            <i class="fas fa-volume-up"></i>
+                        </button>
+                    </div>`;
+            });
+
+            back.innerHTML = `
+                <div class="mb-6">
+                    <div class="flex items-center gap-3 mb-1">
+                        <h2 class="text-3xl font-black text-slate-800">${current.kanji}</h2>
+                        <button class="text-indigo-500" onclick="event.stopPropagation(); speakText(event, '${current.kanji}')">
+                            <i class="fas fa-volume-up"></i>
+                        </button>
+                    </div>
+                    <p class="text-indigo-600 font-bold text-lg">${current.yomi}</p>
+                </div>
+                <div class="mb-6 p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+                    <p class="text-slate-700 font-medium leading-relaxed">${current.meaning}</p>
+                </div>
+                <div class="mt-2">
+                    <span class="text-[10px] font-black text-slate-400 uppercase block mb-3 tracking-widest">例句 / Sentences</span>
+                    ${exampleHTML || '<p class="text-slate-300 italic text-sm text-center">暂无例句</p>'}
+                </div>
+            `;
+
+            updateUI();
+            if (voiceEnabled) setTimeout(() => speakText(null, current.kanji), 800);
+        }
+
+        function speakText(event, text) {
+            if (event) event.stopPropagation();
+            const t = text || activeQueue[0].kanji;
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(t);
+            if (japaneseVoice) utter.voice = japaneseVoice;
+            utter.lang = 'ja-JP';
+            utter.rate = 0.9;
             window.speechSynthesis.speak(utter);
         }
 
         function handleSRS(type, event) {
-            event.stopPropagation();
+            event.stopPropagation(); 
             const c = activeQueue.shift();
             if (type === 'again') activeQueue.splice(1, 0, c);
-            else if (type === 'hard') activeQueue.splice(5, 0, c);
+            else if (type === 'hard') activeQueue.splice(Math.min(activeQueue.length, 5), 0, c);
             else if (type === 'good') activeQueue.push(c);
-            saveProgress(); renderCard();
+            // easy 则直接移除
+            saveProgress(); 
+            renderCard();
         }
+
         function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
-        function saveProgress() { localStorage.setItem('v56_progress', JSON.stringify({ activeQueue, totalCount })); }
+        function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
+        function saveProgress() { localStorage.setItem('jflash_v4', JSON.stringify({ activeQueue, totalCount })); }
         function updateUI() {
-            const p = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
-            document.getElementById('progress-bar').style.width = p + '%';
+            const prog = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
+            document.getElementById('progress-bar').style.width = prog + '%';
             document.getElementById('progress-text').innerText = (totalCount - activeQueue.length) + " / " + totalCount;
         }
     </script>
