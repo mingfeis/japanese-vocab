@@ -3,28 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J-Flash Pro V4.8</title>
+    <title>J-Flash Vocab V5.6 (CSV适配版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
-        body { font-family: 'Noto Sans JP', sans-serif; background: #0f172a; color: #f1f5f9; touch-action: manipulation; overflow: hidden; }
+        body { font-family: 'Noto Sans JP', sans-serif; background: #0f172a; color: #f1f5f9; touch-action: manipulation; }
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .flip-card-inner { transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; height: 580px; }
+        .flip-card-inner { transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; height: 600px; }
         .flipped { transform: rotateY(180deg); }
         .front, .back { backface-visibility: hidden; position: absolute; inset: 0; border-radius: 2.5rem; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
-        .back { transform: rotateY(180deg); background: #ffffff; color: #1e293b; }
-        .front { background: #ffffff; color: #1e293b; cursor: pointer; }
-        .audio-btn { transition: all 0.2s; -webkit-tap-highlight-color: transparent; border: none; outline: none; }
+        .front { background: #ffffff; color: #1e293b; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .back { transform: rotateY(180deg); background: #ffffff; color: #1e293b; display: flex; flex-direction: column; padding: 1.5rem; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .audio-btn { transition: all 0.2s; -webkit-tap-highlight-color: transparent; }
         .audio-btn:active { transform: scale(0.85); background-color: rgba(99, 102, 241, 0.1); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4">
-
-    <div id="init-overlay" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white p-6 text-center">
-        <button onclick="initApp()" class="bg-white text-indigo-600 px-16 py-5 rounded-full font-black shadow-2xl active:scale-95 transition-all text-xl uppercase tracking-widest">
-            Ready
-        </button>
-    </div>
 
     <div class="w-full max-w-md glass-panel p-4 rounded-3xl mb-6 flex items-center justify-between">
         <div class="flex flex-col gap-1">
@@ -34,27 +29,22 @@
             </div>
         </div>
         <label class="text-indigo-400 font-bold text-[10px] bg-white/5 px-4 py-2 rounded-xl border border-white/10 uppercase cursor-pointer">
-            <span>Import</span><input type="file" id="csv-input" accept=".csv" class="hidden">
+            <span>Import CSV</span><input type="file" id="csv-input" accept=".csv" class="hidden">
         </label>
     </div>
 
-    <div id="main-container" class="w-full max-w-md hidden">
-        <div class="relative w-full" style="height: 580px;">
+    <div id="main-container" class="w-full max-w-md">
+        <div class="relative w-full" style="height: 600px;">
             <div id="card-inner" class="flip-card-inner relative w-full">
-                <div class="front flex flex-col shadow-2xl" onclick="flipToBack()">
-                    <div class="w-full h-[60%] bg-slate-900 relative">
-                        <img id="card-image-front" class="w-full h-full object-cover opacity-0 transition-opacity duration-500" src="">
-                    </div>
-                    <div class="flex-1 flex flex-col items-center justify-center p-6 bg-white">
-                        <div id="word-front" class="text-7xl font-black text-slate-800 mb-8 text-center tracking-tighter leading-tight">...</div>
-                        <button onclick="event.stopPropagation(); speakDual(null)" class="audio-btn text-indigo-600 p-5 rounded-full bg-indigo-50/50">
-                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M14 5v14l-7-5H3v-4h4l7-5zm3.5 7c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM15 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-                        </button>
-                    </div>
+                <div class="front p-8 shadow-2xl" onclick="flipToBack()">
+                    <div class="text-indigo-500 font-bold mb-4 uppercase tracking-widest text-xs">Vocabulary</div>
+                    <div id="word-front" class="text-6xl font-black text-slate-800 mb-8 text-center tracking-tighter">...</div>
+                    <div class="text-slate-300 text-sm animate-pulse">Tap to see details</div>
                 </div>
-                <div class="back shadow-2xl flex flex-col p-8 border-t-8 border-indigo-500">
-                    <div id="word-back-content" class="flex-1 overflow-y-auto no-scrollbar mb-4" onclick="flipToFront()"></div>
-                    <div class="grid grid-cols-4 gap-2 pt-4 border-t border-slate-100 mt-auto">
+                <div class="back shadow-2xl p-6 border-t-8 border-indigo-500">
+                    <div id="word-back-content" class="flex-1 overflow-y-auto no-scrollbar pr-1 text-sm">
+                        </div>
+                    <div class="grid grid-cols-4 gap-2 pt-4 border-t border-slate-100 mt-2">
                         <button onclick="handleSRS('again', event)" class="py-4 bg-rose-50 text-rose-500 rounded-2xl font-black text-[10px]">AGAIN</button>
                         <button onclick="handleSRS('hard', event)" class="py-4 bg-amber-50 text-amber-600 rounded-2xl font-black text-[10px]">HARD</button>
                         <button onclick="handleSRS('good', event)" class="py-4 bg-emerald-50 text-emerald-600 rounded-2xl font-black text-[10px]">GOOD</button>
@@ -68,183 +58,124 @@
     <script>
         let activeQueue = [];
         let totalCount = 0;
-        let voiceEnabled = false;
-        let maleVoice = null;
-        let femaleVoice = null;
 
-        function pickVoices() {
-            const vs = window.speechSynthesis.getVoices();
-            // 尋找高品質 Enhanced 女聲
-            femaleVoice = vs.find(v => v.lang.includes('ja') && v.name.includes('Enhanced') && (v.name.includes('Kyoko') || v.name.includes('female'))) ||
-                          vs.find(v => v.lang.includes('ja') && (v.name.includes('Kyoko') || v.name.includes('female'))) ||
-                          vs.find(v => v.lang.includes('ja'));
-
-            // 尋找高品質 Enhanced 男聲
-            maleVoice = vs.find(v => v.lang.includes('ja') && v.name.includes('Enhanced') && (v.name.includes('Otoya') || v.name.includes('male'))) ||
-                        vs.find(v => v.lang.includes('ja') && (v.name.includes('Otoya') || v.name.includes('male'))) ||
-                        femaleVoice; 
-        }
-        if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = pickVoices;
-        }
-
-        function initApp() {
-            pickVoices();
-            voiceEnabled = true;
-            window.speechSynthesis.cancel();
-            document.getElementById('init-overlay').style.display = 'none';
-            document.getElementById('main-container').classList.remove('hidden');
-            const saved = localStorage.getItem('srs_v4_8');
-            if (saved) {
-                const d = JSON.parse(saved); activeQueue = d.activeQueue || []; totalCount = d.totalCount || 0;
-                if (activeQueue.length > 0) renderCard();
-            }
-        }
-
-        // 1. 找到處理檔案上傳的這一段
-    document.getElementById('csv-input').addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-    
-        reader.onload = (event) => {
+        // 修改 CSV 解析部分的代码
+document.getElementById('csv-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (event) => {
         const text = event.target.result;
-        // 將文本按行分割
-        const lines = text.split(/\r?\n/);
-        activeQueue = []; // 清空目前的隊列
+        
+        // 使用高级正则：支持带引号的多行内容解析
+        const rows = text.match(/(".*?"|[^",\r\n]+)(?=\s*,|\s*\r?\n|$)/gs) || [];
+        activeQueue = [];
 
-        lines.forEach(line => {
-            // 使用逗號分割每一行
-            const parts = line.split(',');
+        // 探测 CSV 类型逻辑
+        // 如果第一行前两列看起来像 "第13课", "きっかけ"，则是最新版格式
+        const isNewFormatWithLesson = rows[0]?.includes("第") && rows[0]?.includes("课");
 
-            // 核心修改部分插入於此：
-            if (parts.length >= 3) { 
-                activeQueue.push({
-                    kanji: parts[0].trim(),   // 第1欄：單字（漢字）
-                    yomi: parts[1].trim(),    // 第2欄：假名/音調
-                    meaning: parts[2].trim(), // 第3欄：中文意思
-                    // --- 這裡就是您問的那段代碼 ---
-                    // 從第 4 欄 (index 3) 開始，切下所有剩餘內容存入陣列
-                    examples: parts.slice(3).map(ex => ex.trim()).filter(ex => ex !== "") 
-                });
+        if (isNewFormatWithLesson) {
+            // 模式 A: 兼容最新引号版 (课次, 单词, 详细内容)
+            for (let i = 0; i < rows.length; i += 3) {
+                const word = rows[i+1]?.replace(/^"|"$/g, '').trim();
+                const rawContent = rows[i+2]?.replace(/^"|"$/g, '').trim();
+                if (word && rawContent) {
+                    const lines = rawContent.split('\n');
+                    const exampleLines = lines.filter(l => /^\d+\./.test(l.trim()));
+                    activeQueue.push({
+                        kanji: word,
+                        yomi: lines.find(l => l.includes('[') && !l.includes('【')) || word,
+                        meaning: lines[0],
+                        examples: exampleLines,
+                        fullContent: rawContent
+                    });
+                }
             }
-        });
+        } else {
+            // 模式 B: 兼容以前所有的标准 CSV 格式
+            // 重新按行处理，避免正则干扰
+            const lineArray = text.split(/\r?\n/);
+            lineArray.forEach(line => {
+                const parts = line.split(',');
+                if (parts.length >= 3) {
+                    activeQueue.push({
+                        kanji: parts[0].trim(),
+                        yomi: parts[1].trim(),
+                        meaning: parts[2].trim(),
+                        // 自动抓取后面所有的列作为例句 (兼容1句或多句)
+                        examples: parts.slice(3).map(ex => ex.trim()).filter(ex => ex !== ""),
+                        fullContent: "" 
+                    });
+                }
+            });
+        }
 
-            if (activeQueue.length > 0) {
-                totalCount = activeQueue.length;
-                saveProgress(); 
-                renderCard(); // 開始渲染第一張卡片
-            }
-        };
-        reader.readAsText(file);
+        if (activeQueue.length > 0) {
+            totalCount = activeQueue.length;
+            saveProgress(); 
+            renderCard();
+        }
+    };
+    reader.readAsText(file);
+});
+
+function renderCard() {
+    if (activeQueue.length === 0) return;
+    const current = activeQueue[0];
+    document.getElementById('card-inner').classList.remove('flipped');
+    document.getElementById('word-front').innerText = current.kanji;
+
+    let exampleHTML = '';
+    current.examples.forEach(ex => {
+        exampleHTML += `
+            <div class="p-3 bg-slate-50 rounded-xl mb-2 flex items-start justify-between gap-2 border border-slate-100">
+                <p class="text-[13px] text-slate-600 flex-1 leading-relaxed">${ex}</p>
+                <button class="audio-btn text-indigo-500 bg-white p-2 rounded-full shadow-sm flex-shrink-0" onclick="event.stopPropagation(); speak('${ex}')">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M14 5v14l-7-5H3v-4h4l7-5zm3.5 7c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+                </button>
+            </div>`;
     });
 
-    function renderCard() {
-        if (activeQueue.length === 0) return;
-        const current = activeQueue[0];
+    // 背面布局兼容处理
+    const detailsDisplay = current.fullContent 
+        ? `<div class="mb-4 whitespace-pre-wrap text-slate-600 border-l-4 border-indigo-100 pl-3">${current.fullContent.split('【例句】')[0]}</div>`
+        : `<div class="mb-6 p-4 bg-indigo-50 rounded-2xl border border-indigo-100"><p class="text-slate-700 font-bold">${current.meaning}</p></div>`;
 
-        // 1. 重置翻轉狀態
-        document.getElementById('card-inner').classList.remove('flipped');
-    
-        // 2. 正面顯示
-        document.getElementById('word-front').innerText = current.kanji;
-
-        // 3. 背面內容構造
-        const back = document.getElementById('word-back-content');
-    
-        // 生成例句 HTML 區塊
-        let exampleHTML = '';
-        if (current.examples && current.examples.length > 0) {
-            current.examples.forEach(ex => {
-            if(ex.trim() !== "") {
-                exampleHTML += `
-                    <div class="p-3 bg-slate-50 rounded-xl mb-3 flex items-start justify-between gap-3 border border-slate-100 shadow-sm">
-                        <p class="text-sm text-slate-700 leading-relaxed flex-1">${ex}</p>
-                        <button class="audio-btn text-indigo-500 bg-white p-2 rounded-full shadow-sm flex-shrink-0" 
-                                onclick="event.stopPropagation(); speak('${ex}')">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M14 5v14l-7-5H3v-4h4l7-5zm3.5 7c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
-                            </svg>
-                        </button>
-                    </div>`;
-            }
-        });
-    }
-
-    // 組合背面完整內容
-    back.innerHTML = `
+    document.getElementById('word-back-content').innerHTML = `
         <div class="mb-4">
             <h2 class="text-3xl font-black text-slate-800">${current.kanji}</h2>
-            <p class="text-indigo-600 font-bold text-lg">${current.yomi}</p>
+            <p class="text-indigo-600 font-bold">${current.yomi}</p>
         </div>
-        
-        <div class="mb-6 p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
-            <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">Meaning</span>
-            <p class="text-slate-700 font-bold">${current.meaning}</p>
-        </div>
-
-        <div class="mt-4">
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">Example Sentences</span>
-            ${exampleHTML || '<p class="text-slate-300 italic text-sm">No examples available.</p>'}
+        ${detailsDisplay}
+        <div class="mt-2">
+            <span class="text-[10px] font-black text-slate-400 uppercase block mb-2 tracking-widest">Sentences</span>
+            ${exampleHTML || '<p class="text-slate-300 italic text-sm text-center">No examples</p>'}
         </div>
     `;
-
-        updateUI();
-    }
-
-        /*function speakDual(text) {
-            const t = text || activeQueue[0].kanji;
-            window.speechSynthesis.cancel();
-            
-            // 男聲第一遍
-            const m = new SpeechSynthesisUtterance(t);
-            if (maleVoice) m.voice = maleVoice;
-            m.lang = 'ja-JP';
-            m.rate = 0.85;
-
-            m.onend = () => {
-                setTimeout(() => {
-                    const f = new SpeechSynthesisUtterance(t);
-                    if (femaleVoice) f.voice = femaleVoice;
-                    f.lang = 'ja-JP';
-                    f.rate = 0.95;
-                    window.speechSynthesis.speak(f);
-                }, 800);
-            };
-            window.speechSynthesis.speak(m);
-        }*/
-
-        function speakDual(text) {
-            // 1. 停止當前所有發音
-            window.speechSynthesis.cancel();
-
-            // 2. 過濾邏輯：移除全角（）和半角 () 括號及其中的中文翻譯
-            // 這樣語音引擎只會讀取剩下的日文部分
-            const japaneseOnly = text.replace(/（[^）]+）/g, '').replace(/\([^)]+\)/g, '');
-
-            // 3. 建立語音對象
-            const utter = new SpeechSynthesisUtterance(japaneseOnly);
-            utter.lang = 'ja-JP';
-            utter.rate = 0.9; // 稍微放慢一點速度，方便聽清單字
-
-            // 4. 強制使用高品質 Voice 3 (針對您的 Samsung 手機優化)
-            const vs = window.speechSynthesis.getVoices();
-            const voice3 = vs.find(v => v.name.includes('Voice 3') || v.name.includes('ja-jp-x-jd-local'));
-            if (voice3) utter.voice = voice3;
-
-            // 5. 執行朗讀
-            window.speechSynthesis.speak(utter);
+    updateUI();
 }
+        function speak(text) {
+            window.speechSynthesis.cancel();
+            // 过滤掉数字序号、中文括号内容
+            const cleanText = text.replace(/^\d+\./, '').replace(/（[^）]+）/g, '').replace(/\([^)]+\)/g, '');
+            const utter = new SpeechSynthesisUtterance(cleanText);
+            utter.lang = 'ja-JP';
+            const vs = window.speechSynthesis.getVoices();
+            const voice = vs.find(v => v.name.includes('Voice 3')) || vs.find(v => v.lang === 'ja-JP');
+            if (voice) utter.voice = voice;
+            window.speechSynthesis.speak(utter);
+        }
 
         function handleSRS(type, event) {
-            event.stopPropagation(); const c = activeQueue.shift();
+            event.stopPropagation();
+            const c = activeQueue.shift();
             if (type === 'again') activeQueue.splice(1, 0, c);
-            else if (type === 'hard') activeQueue.splice(Math.min(activeQueue.length, 5), 0, c);
+            else if (type === 'hard') activeQueue.splice(5, 0, c);
             else if (type === 'good') activeQueue.push(c);
             saveProgress(); renderCard();
         }
         function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
-        function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
-        function saveProgress() { localStorage.setItem('srs_v4_8', JSON.stringify({ activeQueue, totalCount })); }
+        function saveProgress() { localStorage.setItem('v56_progress', JSON.stringify({ activeQueue, totalCount })); }
         function updateUI() {
             const p = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
             document.getElementById('progress-bar').style.width = p + '%';
