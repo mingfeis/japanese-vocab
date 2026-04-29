@@ -125,6 +125,12 @@ function renderCard() {
     document.getElementById('card-inner').classList.remove('flipped');
     document.getElementById('word-front').innerText = current.kanji;
 
+    const img = document.getElementById('card-image-front');
+            img.style.opacity = '0';
+            const kw = current.kanji.replace(/[^\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/g, '');
+            img.src = `https://loremflickr.com/600/450/${encodeURIComponent(kw || 'japan')}?lock=${Math.floor(Math.random()*1000)}`;
+            img.onload = () => img.style.opacity = '1';
+
     let exampleHTML = '';
     current.examples.forEach(ex => {
         exampleHTML += `
