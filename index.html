@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J-Flash Pro V5.5 Premium</title>
+    <title>J-Flash Pro V5.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; background: #0f172a; color: #f1f5f9; touch-action: manipulation; }
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .flip-card-inner { transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; height: 560px; }
+        .flip-card-inner { transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; height: 580px; }
         .flipped { transform: rotateY(180deg); }
         .front, .back { backface-visibility: hidden; position: absolute; inset: 0; border-radius: 2.5rem; overflow: hidden; }
         .back { transform: rotateY(180deg); background: #ffffff; color: #1e293b; }
@@ -21,8 +21,8 @@
 <body class="min-h-screen flex flex-col items-center p-4">
 
     <div id="init-overlay" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white p-6 text-center">
-        <h1 class="text-3xl font-black mb-4">J-FLASH V5.5</h1>
-        <p class="mb-8 opacity-70">高清语音与搭配词逻辑已优化</p>
+        <h1 class="text-3xl font-black mb-4">J-FLASH V5.6</h1>
+        <p class="mb-8 opacity-70">语音过滤 & 搭配词逻辑已修正</p>
         <button id="start-btn" class="bg-white text-indigo-600 px-16 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all">解锁并进入学习</button>
     </div>
 
@@ -31,20 +31,20 @@
             <span id="progress-text" class="text-[10px] font-black text-indigo-300 uppercase">PROGRESS: 0/0</span>
             <div class="w-24 bg-white/10 h-1 rounded-full mt-1"><div id="progress-bar" class="bg-indigo-400 h-full w-0 transition-all"></div></div>
         </div>
-        <button onclick="document.getElementById('csv-input').click()" class="bg-indigo-500 text-white text-xs px-5 py-2 rounded-xl font-black shadow-lg">导入词库 (CSV)</button>
+        <button onclick="document.getElementById('csv-input').click()" class="bg-indigo-500 text-white text-xs px-5 py-2 rounded-xl font-black shadow-lg">导入 CSV</button>
         <input type="file" id="csv-input" accept=".csv" class="hidden">
     </div>
 
     <div id="main-container" class="w-full max-w-md hidden">
-        <div class="relative w-full" style="height: 560px;">
+        <div class="relative w-full" style="height: 580px;">
             <div id="card-inner" class="flip-card-inner relative w-full">
                 <div class="front shadow-2xl flex flex-col" onclick="flipToBack()">
                     <div class="h-1/2 bg-slate-900 relative">
-                        <img id="card-image" class="w-full h-full object-cover opacity-0 transition-opacity duration-1000" src="">
+                        <img id="card-image" class="w-full h-full object-cover opacity-0 transition-opacity duration-700" src="">
                     </div>
-                    <div class="flex-1 flex flex-col items-center justify-center p-6 bg-white">
-                        <div id="word-front" class="text-6xl font-black text-slate-800 mb-8 tracking-tighter text-center">加载中...</div>
-                        <button onclick="speakCurrent(event)" class="w-20 h-20 rounded-full bg-slate-50 text-indigo-500 flex items-center justify-center shadow-inner hover:bg-indigo-100">
+                    <div class="flex-1 flex flex-col items-center justify-center p-6 bg-white text-center">
+                        <div id="word-front" class="text-6xl font-black text-slate-800 mb-8 tracking-tighter">...</div>
+                        <button onclick="speakCurrent(event)" class="w-20 h-20 rounded-full bg-slate-50 text-indigo-500 flex items-center justify-center shadow-inner">
                             <i class="fas fa-volume-up text-3xl"></i>
                         </button>
                     </div>
@@ -67,33 +67,29 @@
         let totalCount = 0;
         let selectedVoice = null;
 
-        // 核心：强制锁定高清语音包
         function getBestVoice() {
             const voices = window.speechSynthesis.getVoices();
-            if (voices.length === 0) return;
-            selectedVoice = voices.find(v => v.lang.includes('ja') && (v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Natural'))) ||
+            selectedVoice = voices.find(v => v.lang.includes('ja') && (v.name.includes('Google') || v.name.includes('Microsoft'))) || 
                             voices.find(v => v.lang.includes('ja')) || voices[0];
         }
         window.speechSynthesis.onvoiceschanged = getBestVoice;
 
         document.getElementById('start-btn').addEventListener('click', function() {
             getBestVoice();
-            window.speechSynthesis.speak(new SpeechSynthesisUtterance('')); // 激活
+            window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
             document.getElementById('init-overlay').classList.add('hidden');
             document.getElementById('main-container').classList.remove('hidden');
-            const saved = localStorage.getItem('jflash_v5_5');
+            const saved = localStorage.getItem('jflash_v5_6');
             if (saved) {
                 const d = JSON.parse(saved); activeQueue = d.activeQueue; totalCount = d.totalCount;
                 if (activeQueue.length > 0) renderCard();
             }
         });
 
-        // 核心：状态机解析器 (精准提取搭配词和例句)
         function parseCSV(text) {
             const rows = [];
             let currentField = '', inQuotes = false;
             let currentRow = [];
-            // 处理开头可能的乱码或空行
             const cleanText = text.trim();
 
             for (let i = 0; i < cleanText.length; i++) {
@@ -119,11 +115,15 @@
                 const word = row[1] ? row[1].trim() : "";
                 const detail = row[2] ? row[2].trim() : "";
                 const lines = detail.split('\n').map(l => l.trim()).filter(l => l);
+                
+                // 修正：从所有行中模糊匹配包含“搭配词”字样的内容
+                const collocationLine = lines.find(l => l.includes('搭配词')) || "";
+
                 return {
                     kanji: word,
                     yomi: lines.find(l => l.includes('[') && !l.includes('【')) || word,
-                    collocation: lines.find(l => l.includes('【搭配词】')) || "",
-                    meaning: lines.find(l => !l.includes('[') && !l.includes('【') && !/^\d+\./.test(l)) || "点击查看详情",
+                    collocation: collocationLine,
+                    meaning: lines[1] || "",
                     examples: lines.filter(l => /^\d+\./.test(l))
                 };
             }).filter(item => item.kanji);
@@ -136,7 +136,7 @@
                 if (results.length > 0) {
                     activeQueue = results; totalCount = results.length;
                     saveProgress(); renderCard();
-                } else alert("导入失败。请确保文件是 UTF-8 编码且符合格式。");
+                }
             };
             reader.readAsText(e.target.files[0]);
         });
@@ -149,21 +149,20 @@
             
             const img = document.getElementById('card-image');
             img.style.opacity = '0';
-            img.src = `https://loremflickr.com/800/600/japan,zen,culture?lock=${Math.random()}`;
+            img.src = `https://loremflickr.com/800/600/japan,temple?lock=${Math.random()}`;
             img.onload = () => img.style.opacity = '1';
 
-            // 搭配词样式增强
             const collHTML = current.collocation ? 
-                `<div class="mb-4 p-4 bg-amber-50 border border-amber-100 rounded-2xl">
-                    <span class="text-[10px] font-black text-amber-500 block mb-1 uppercase tracking-widest">Collocation / 搭配</span>
-                    <p class="text-sm text-amber-900 font-bold leading-relaxed">${current.collocation.replace('【搭配词】', '').trim()}</p>
+                `<div class="mb-4 p-4 bg-orange-50 border border-orange-100 rounded-2xl">
+                    <span class="text-[10px] font-black text-orange-400 block mb-1 uppercase tracking-widest">Collocation / 搭配</span>
+                    <p class="text-sm text-orange-900 font-bold">${current.collocation.replace(/【|】/g, '').trim()}</p>
                 </div>` : '';
 
             let exHTML = '';
             current.examples.forEach(ex => {
-                exHTML += `<div class="p-4 bg-slate-50 rounded-2xl mb-2 flex justify-between items-center border border-slate-100 shadow-sm">
-                    <p class="text-[13px] text-slate-700 leading-relaxed flex-1">${ex}</p>
-                    <button class="ml-3 text-indigo-500 bg-white w-10 h-10 rounded-full flex-shrink-0 shadow-sm flex items-center justify-center" onclick="event.stopPropagation(); speak('${ex.replace(/^\d+\./,'')}')">
+                exHTML += `<div class="p-4 bg-slate-50 rounded-2xl mb-2 flex justify-between items-center border border-slate-100">
+                    <p class="text-sm text-slate-700 leading-relaxed flex-1">${ex}</p>
+                    <button class="ml-3 text-indigo-500 bg-white w-10 h-10 rounded-full shadow-sm flex-shrink-0 flex items-center justify-center" onclick="event.stopPropagation(); speak('${ex.replace(/^\d+\./,'')}')">
                         <i class="fas fa-volume-up"></i>
                     </button>
                 </div>`;
@@ -179,25 +178,27 @@
                 </div>
                 ${collHTML}
                 <div class="mb-6 p-5 bg-indigo-50/50 rounded-3xl border border-indigo-100/50">
-                    <p class="text-slate-800 font-medium leading-relaxed">${current.meaning}</p>
+                    <p class="text-slate-800 font-medium">${current.meaning}</p>
                 </div>
                 <div class="space-y-2">
                     <span class="text-[10px] font-black text-slate-400 block mb-2 tracking-widest uppercase">Example Sentences</span>
-                    ${exHTML || '<p class="text-slate-300 italic text-center text-sm">No examples available</p>'}
+                    ${exHTML || '<p class="text-slate-300 italic text-center text-sm">No examples</p>'}
                 </div>
             `;
             updateUI();
-            setTimeout(() => speak(current.kanji), 700);
+            setTimeout(() => speak(current.kanji), 600);
         }
 
         function speak(t) {
             if (!t) return;
             window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(t);
+            // 修正：使用正则剔除所有中英文括号内的内容
+            const cleanText = t.replace(/\（.*?\）|\(.*?\)|（.*?）/g, '');
+            const u = new SpeechSynthesisUtterance(cleanText);
             if (selectedVoice) u.voice = selectedVoice;
             u.lang = 'ja-JP';
-            u.rate = 0.88; // 优化语速
-            u.pitch = 1.05; // 优化音调
+            u.rate = 1.0; // 语速恢复到标准 1.0
+            u.pitch = 1.0;
             window.speechSynthesis.speak(u);
         }
 
@@ -213,11 +214,11 @@
 
         function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
         function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
-        function saveProgress() { localStorage.setItem('jflash_v5_5', JSON.stringify({ activeQueue, totalCount })); }
+        function saveProgress() { localStorage.setItem('jflash_v5_6', JSON.stringify({ activeQueue, totalCount })); }
         function updateUI() {
             const prog = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
             document.getElementById('progress-bar').style.width = prog + '%';
-            document.getElementById('progress-text').innerText = `PROGRESS: ${totalCount - activeQueue.length} / ${totalCount}`;
+            document.getElementById('progress-text').innerText = `Progress: ${totalCount - activeQueue.length} / ${totalCount}`;
         }
     </script>
 </body>
