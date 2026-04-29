@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J-Flash Pro V6.5 Final</title>
+    <title>J-Flash Pro V6.6 Final</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -21,15 +21,15 @@
 <body class="min-h-screen flex flex-col items-center p-4">
 
     <div id="init-overlay" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white p-6 text-center">
-        <h1 class="text-3xl font-black mb-4">J-FLASH V6.5</h1>
-        <button id="start-btn" class="bg-white text-indigo-600 px-16 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all">解锁并开始</button>
+        <h1 class="text-3xl font-black mb-4 tracking-tighter">J-FLASH V6.6</h1>
+        <button id="start-btn" class="bg-white text-indigo-600 px-16 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all">解锁并进入学习</button>
     </div>
 
     <div class="w-full max-w-md glass-panel p-4 rounded-3xl mb-4 flex items-center justify-between">
         <div class="flex flex-col">
-            <span id="progress-text" class="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Progress: 0/0</span>
-            <div class="w-24 bg-white/10 h-1.5 rounded-full mt-1 overflow-hidden">
-                <div id="progress-bar" class="bg-indigo-400 h-full w-0 transition-all duration-500"></div>
+            <span id="progress-text" class="text-[10px] font-black text-indigo-300 uppercase">Progress: 0/0</span>
+            <div class="w-24 bg-white/10 h-1 rounded-full mt-1 overflow-hidden">
+                <div id="progress-bar" class="bg-indigo-500 h-full w-0 transition-all"></div>
             </div>
         </div>
         <button onclick="document.getElementById('csv-input').click()" class="bg-indigo-500 text-white text-xs px-5 py-2 rounded-xl font-black">导入 CSV</button>
@@ -41,11 +41,11 @@
             <div id="card-inner" class="flip-card-inner relative w-full">
                 <div class="front shadow-2xl flex flex-col" onclick="flipToBack()">
                     <div class="h-[45%] bg-slate-900 relative">
-                        <img id="card-image" class="w-full h-full object-cover opacity-0 transition-opacity duration-700" src="">
+                        <img id="card-image" class="w-full h-full object-cover opacity-0 transition-opacity duration-1000" src="">
                     </div>
                     <div class="flex-1 flex flex-col items-center justify-center p-6 bg-white text-center">
                         <div id="word-front" class="text-6xl font-black text-slate-800 mb-8 tracking-tighter">...</div>
-                        <button onclick="speakCurrent(event)" class="w-20 h-20 rounded-full bg-slate-50 text-indigo-500 flex items-center justify-center shadow-inner active:bg-indigo-100 transition-colors">
+                        <button onclick="speakCurrent(event)" class="w-20 h-20 rounded-full bg-slate-50 text-indigo-500 flex items-center justify-center shadow-inner hover:bg-indigo-100 transition-colors">
                             <i class="fas fa-volume-up text-3xl"></i>
                         </button>
                     </div>
@@ -53,10 +53,10 @@
                 <div class="back shadow-2xl flex flex-col p-6 overflow-hidden">
                     <div id="back-content" class="flex-1 overflow-y-auto no-scrollbar" onclick="flipToFront()"></div>
                     <div class="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-slate-100">
-                        <button onclick="handleSRS('again', event)" class="py-4 bg-rose-50 text-rose-500 rounded-2xl text-[10px] font-black">AGAIN</button>
-                        <button onclick="handleSRS('hard', event)" class="py-4 bg-amber-50 text-amber-600 rounded-2xl text-[10px] font-black">HARD</button>
-                        <button onclick="handleSRS('good', event)" class="py-4 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-black">GOOD</button>
-                        <button onclick="handleSRS('easy', event)" class="py-4 bg-sky-50 text-sky-600 rounded-2xl text-[10px] font-black">EASY</button>
+                        <button onclick="handleSRS('again', event)" class="py-4 bg-rose-50 text-rose-500 rounded-2xl text-[10px] font-black uppercase">Again</button>
+                        <button onclick="handleSRS('hard', event)" class="py-4 bg-amber-50 text-amber-600 rounded-2xl text-[10px] font-black uppercase">Hard</button>
+                        <button onclick="handleSRS('good', event)" class="py-4 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-black uppercase">Good</button>
+                        <button onclick="handleSRS('easy', event)" class="py-4 bg-sky-50 text-sky-600 rounded-2xl text-[10px] font-black uppercase">Easy</button>
                     </div>
                 </div>
             </div>
@@ -80,13 +80,14 @@
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
             document.getElementById('init-overlay').classList.add('hidden');
             document.getElementById('main-container').classList.remove('hidden');
-            const saved = localStorage.getItem('jflash_v6_5');
+            const saved = localStorage.getItem('jflash_v6_6');
             if (saved) {
                 const d = JSON.parse(saved); activeQueue = d.activeQueue; totalCount = d.totalCount;
                 if (activeQueue.length > 0) renderCard();
             }
         });
 
+        // 终极解析器：彻底物理隔离冗余行
         function parseCSV(text) {
             const rows = [];
             let currentField = '', inQuotes = false, currentRow = [];
@@ -112,18 +113,19 @@
             return rows.filter(r => r[0] && r[0].includes('第')).map(row => {
                 const word = (row[1] || "").trim();
                 const detail = (row[2] || "").trim();
-                const lines = detail.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+                const lines = detail.split(/\r?\n|\n/).map(l => l.trim()).filter(l => l);
                 
+                // 1. 精准提取
                 const collocation = lines.find(l => l.includes('搭配')) || "";
                 const inflection = lines.find(l => l.includes('變化') || l.includes('变化')) || "";
                 
-                // --- 终极正则过滤：彻底删除包含读音、词性、标签的所有冗余行 ---
-                const meaningLines = lines.filter(l => 
+                // 2. 物理负向过滤：只要包含 [ 或是重复的单词，全杀
+                const validMeanings = lines.filter(l => 
+                    !l.includes('[') && 
                     !l.includes('【') && 
                     !/^\d+\./.test(l) && 
-                    !l.includes('[') && // 物理删除包含词性中括号的所有行
                     !l.includes(word) &&
-                    l.length > 1 // 过滤零碎字符
+                    l.length > 1
                 );
 
                 return {
@@ -131,7 +133,7 @@
                     yomi: lines.find(l => l.includes('[') && !l.includes('【')) || word,
                     collocation: collocation,
                     inflection: inflection,
-                    meaning: meaningLines.join(' / '),
+                    meaning: validMeanings.join(' / '),
                     examples: lines.filter(l => /^\d+\./.test(l))
                 };
             }).filter(item => item.kanji);
@@ -157,22 +159,21 @@
             
             const img = document.getElementById('card-image');
             img.style.opacity = '0';
-            const uniqueSeed = Date.now() + Math.random();
-            img.src = `https://loremflickr.com/800/600/japan,landscape,architecture?lock=${uniqueSeed}`;
+            const seed = Date.now() + Math.random();
+            img.src = `https://loremflickr.com/800/600/japan,nature,zen?lock=${seed}`;
             img.onload = () => img.style.opacity = '1';
 
             let tagsHTML = '';
-            if (current.collocation) tagsHTML += `<div class="mb-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold tracking-tight">${current.collocation}</div>`;
-            if (current.inflection) tagsHTML += `<div class="mb-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold tracking-tight">${current.inflection}</div>`;
+            if (current.collocation) tagsHTML += `<div class="mb-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold">${current.collocation}</div>`;
+            if (current.inflection) tagsHTML += `<div class="mb-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold">${current.inflection}</div>`;
             
-            let meaningBox = current.meaning ? 
-                `<div class="mb-6 p-4 bg-slate-50 border-l-4 border-indigo-400 rounded-r-xl text-sm text-slate-600 font-medium">${current.meaning}</div>` : '';
+            let meaningBox = current.meaning ? `<div class="mb-6 p-4 bg-white border border-slate-100 rounded-2xl text-[14px] text-slate-600 font-medium shadow-sm italic leading-relaxed">${current.meaning}</div>` : '';
 
             let exHTML = '';
             current.examples.forEach(ex => {
-                exHTML += `<div class="p-4 bg-slate-50 rounded-2xl mb-2 flex justify-between items-center border border-slate-100 shadow-sm">
+                exHTML += `<div class="p-4 bg-slate-50 rounded-2xl mb-2 flex justify-between items-center border border-slate-100">
                     <p class="text-[13px] text-slate-700 leading-relaxed flex-1">${ex}</p>
-                    <button class="ml-3 text-indigo-500 bg-white w-10 h-10 rounded-full shadow-sm flex-shrink-0 flex items-center justify-center hover:bg-indigo-50 transition-all" onclick="event.stopPropagation(); speak('${ex}')">
+                    <button class="ml-3 text-indigo-500 bg-white w-10 h-10 rounded-full shadow-sm flex items-center justify-center" onclick="event.stopPropagation(); speak('${ex}')">
                         <i class="fas fa-volume-up"></i>
                     </button>
                 </div>`;
@@ -219,7 +220,7 @@
 
         function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
         function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
-        function saveProgress() { localStorage.setItem('jflash_v6_5', JSON.stringify({ activeQueue, totalCount })); }
+        function saveProgress() { localStorage.setItem('jflash_v6_6', JSON.stringify({ activeQueue, totalCount })); }
         function updateUI() {
             const prog = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
             document.getElementById('progress-bar').style.width = prog + '%';
