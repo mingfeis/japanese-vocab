@@ -165,7 +165,7 @@
             }
         }
 
-        function speakDual(text) {
+        /*function speakDual(text) {
             const t = text || activeQueue[0].kanji;
             window.speechSynthesis.cancel();
             
@@ -185,7 +185,29 @@
                 }, 800);
             };
             window.speechSynthesis.speak(m);
-        }
+        }*/
+
+        function speakDual(text) {
+            // 1. 停止當前所有發音
+            window.speechSynthesis.cancel();
+
+            // 2. 過濾邏輯：移除全角（）和半角 () 括號及其中的中文翻譯
+            // 這樣語音引擎只會讀取剩下的日文部分
+            const japaneseOnly = text.replace(/（[^）]+）/g, '').replace(/\([^)]+\)/g, '');
+
+            // 3. 建立語音對象
+            const utter = new SpeechSynthesisUtterance(japaneseOnly);
+            utter.lang = 'ja-JP';
+            utter.rate = 0.9; // 稍微放慢一點速度，方便聽清單字
+
+            // 4. 強制使用高品質 Voice 3 (針對您的 Samsung 手機優化)
+            const vs = window.speechSynthesis.getVoices();
+            const voice3 = vs.find(v => v.name.includes('Voice 3') || v.name.includes('ja-jp-x-jd-local'));
+            if (voice3) utter.voice = voice3;
+
+            // 5. 執行朗讀
+            window.speechSynthesis.speak(utter);
+}
 
         function handleSRS(type, event) {
             event.stopPropagation(); const c = activeQueue.shift();
