@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J-Flash Pro V6.0 Final</title>
+    <title>J-Flash Pro V6.1 Final</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -21,9 +21,9 @@
 <body class="min-h-screen flex flex-col items-center p-4">
 
     <div id="init-overlay" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white p-6 text-center">
-        <h1 class="text-3xl font-black mb-4 tracking-tighter">J-FLASH V6.0</h1>
-        <p class="mb-8 opacity-70">优质女声 & 布局精简版</p>
-        <button id="start-btn" class="bg-white text-indigo-600 px-16 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all">解锁并进入</button>
+        <h1 class="text-3xl font-black mb-4 tracking-tighter">J-FLASH V6.1</h1>
+        <p class="mb-8 opacity-70">图片动态变化 & 冗余内容净化</p>
+        <button id="start-btn" class="bg-white text-indigo-600 px-16 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all">解锁并学习</button>
     </div>
 
     <div class="w-full max-w-md glass-panel p-4 rounded-3xl mb-4 flex items-center justify-between">
@@ -44,7 +44,7 @@
                     </div>
                     <div class="flex-1 flex flex-col items-center justify-center p-6 bg-white text-center">
                         <div id="word-front" class="text-6xl font-black text-slate-800 mb-8 tracking-tighter">...</div>
-                        <button onclick="speakCurrent(event)" class="w-20 h-20 rounded-full bg-slate-50 text-indigo-500 flex items-center justify-center shadow-inner hover:bg-indigo-100 transition-colors">
+                        <button onclick="speakCurrent(event)" class="w-20 h-20 rounded-full bg-slate-50 text-indigo-500 flex items-center justify-center shadow-inner hover:bg-indigo-100 transition-all">
                             <i class="fas fa-volume-up text-3xl"></i>
                         </button>
                     </div>
@@ -69,8 +69,7 @@
 
         function findFemaleVoice() {
             const vs = window.speechSynthesis.getVoices();
-            // 严格过滤男声，只找 Google 日本语或系统默认女声
-            femaleVoice = vs.find(v => v.lang.includes('ja') && (v.name.includes('Google') || v.name.includes('Nanami') || v.name.includes('Kyoko') || v.name.includes('Siri'))) || 
+            femaleVoice = vs.find(v => v.lang.includes('ja') && (v.name.includes('Google') || v.name.includes('Nanami') || v.name.includes('Kyoko'))) || 
                           vs.find(v => v.lang.includes('ja')) || vs[0];
         }
         window.speechSynthesis.onvoiceschanged = findFemaleVoice;
@@ -80,7 +79,7 @@
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
             document.getElementById('init-overlay').classList.add('hidden');
             document.getElementById('main-container').classList.remove('hidden');
-            const saved = localStorage.getItem('jflash_v6_0');
+            const saved = localStorage.getItem('jflash_v6_1');
             if (saved) {
                 const d = JSON.parse(saved); activeQueue = d.activeQueue; totalCount = d.totalCount;
                 if (activeQueue.length > 0) renderCard();
@@ -114,12 +113,17 @@
                 const detail = row[2] ? row[2].trim() : "";
                 const lines = detail.split('\n').map(l => l.trim()).filter(l => l);
                 
-                // --- 修复点：独立提取所有标签 ---
                 const collocation = lines.find(l => l.includes('搭配')) || "";
                 const inflection = lines.find(l => l.includes('變化') || l.includes('变化')) || "";
                 
-                // 释义：排除包含 [ ] 和 【 】 的行，防止重复
-                const meaning = lines.find(l => !l.includes('[') && !l.includes('【') && !/^\d+\./.test(l)) || "";
+                // --- 彻底移除多余词汇栏的关键逻辑 ---
+                // 排除带有 [名词/动词] 标记的行，这些通常是重复的定义行
+                const meaning = lines.find(l => 
+                    !l.includes('[') && 
+                    !l.includes('【') && 
+                    !/^\d+\./.test(l) && 
+                    !l.match(/\[(名|动|形|副|他|自|助|感|接|連)/)
+                ) || "";
 
                 return {
                     kanji: word,
@@ -150,15 +154,17 @@
             document.getElementById('card-inner').classList.remove('flipped');
             document.getElementById('word-front').innerText = current.kanji;
             
+            // --- 图片强制变化逻辑 ---
             const img = document.getElementById('card-image');
             img.style.opacity = '0';
-            img.src = `https://loremflickr.com/800/600/japan,landscape?lock=${Math.random()}`;
+            // 使用单词+时间戳+随机数确保强制刷新和相关性
+            const randomTag = Math.floor(Math.random() * 100000);
+            img.src = `https://loremflickr.com/800/600/japan,culture,${encodeURIComponent(current.kanji)}?lock=${randomTag}`;
             img.onload = () => img.style.opacity = '1';
 
-            // 统一紫色面板显示搭配和变化
             let tagsHTML = '';
-            if (current.collocation) tagsHTML += `<div class="mb-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold">${current.collocation}</div>`;
-            if (current.inflection) tagsHTML += `<div class="mb-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold">${current.inflection}</div>`;
+            if (current.collocation) tagsHTML += `<div class="mb-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold tracking-tight">${current.collocation}</div>`;
+            if (current.inflection) tagsHTML += `<div class="mb-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900 font-bold tracking-tight">${current.inflection}</div>`;
 
             let exHTML = '';
             current.examples.forEach(ex => {
@@ -179,11 +185,11 @@
                     <p class="text-indigo-600 font-bold text-xl mt-1">${current.yomi}</p>
                 </div>
                 ${tagsHTML}
-                <div class="mb-6 p-4 bg-white border-l-4 border-indigo-400 rounded-r-2xl text-[14px] text-slate-600 font-medium">
-                    ${current.meaning}
+                <div class="mb-6 p-4 bg-white border-l-4 border-indigo-400 rounded-r-2xl text-[14px] text-slate-600 font-medium shadow-sm">
+                    ${current.meaning || '<span class="italic opacity-50">详细释义已折叠至标签</span>'}
                 </div>
                 <div class="space-y-1">
-                    <span class="text-[10px] font-black text-slate-400 block mb-2 tracking-widest uppercase text-center">Example Sentences</span>
+                    <span class="text-[10px] font-black text-slate-400 block mb-2 tracking-widest uppercase text-center">Practice Examples</span>
                     ${exHTML || '<p class="text-slate-300 italic text-center text-sm">No examples</p>'}
                 </div>
             `;
@@ -213,7 +219,7 @@
 
         function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
         function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
-        function saveProgress() { localStorage.setItem('jflash_v6_0', JSON.stringify({ activeQueue, totalCount })); }
+        function saveProgress() { localStorage.setItem('jflash_v6_1', JSON.stringify({ activeQueue, totalCount })); }
         function updateUI() {
             const prog = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
             document.getElementById('progress-bar').style.width = prog + '%';
