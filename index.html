@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J-Flash Pro V5.6</title>
+    <title>J-Flash Pro V5.7 Male Voice</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
         body { font-family: 'Noto Sans JP', sans-serif; background: #0f172a; color: #f1f5f9; touch-action: manipulation; }
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .flip-card-inner { transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; height: 580px; }
+        .flip-card-inner { transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; height: 600px; }
         .flipped { transform: rotateY(180deg); }
         .front, .back { backface-visibility: hidden; position: absolute; inset: 0; border-radius: 2.5rem; overflow: hidden; }
         .back { transform: rotateY(180deg); background: #ffffff; color: #1e293b; }
@@ -21,8 +21,8 @@
 <body class="min-h-screen flex flex-col items-center p-4">
 
     <div id="init-overlay" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white p-6 text-center">
-        <h1 class="text-3xl font-black mb-4">J-FLASH V5.6</h1>
-        <p class="mb-8 opacity-70">语音过滤 & 搭配词逻辑已修正</p>
+        <h1 class="text-3xl font-black mb-4">J-FLASH V5.7</h1>
+        <p class="mb-8 opacity-70">高清男声 & 词性/搭配解析已修复</p>
         <button id="start-btn" class="bg-white text-indigo-600 px-16 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all">解锁并进入学习</button>
     </div>
 
@@ -31,15 +31,15 @@
             <span id="progress-text" class="text-[10px] font-black text-indigo-300 uppercase">PROGRESS: 0/0</span>
             <div class="w-24 bg-white/10 h-1 rounded-full mt-1"><div id="progress-bar" class="bg-indigo-400 h-full w-0 transition-all"></div></div>
         </div>
-        <button onclick="document.getElementById('csv-input').click()" class="bg-indigo-500 text-white text-xs px-5 py-2 rounded-xl font-black shadow-lg">导入 CSV</button>
+        <button onclick="document.getElementById('csv-input').click()" class="bg-indigo-500 text-white text-xs px-5 py-2 rounded-xl font-black">导入 CSV</button>
         <input type="file" id="csv-input" accept=".csv" class="hidden">
     </div>
 
     <div id="main-container" class="w-full max-w-md hidden">
-        <div class="relative w-full" style="height: 580px;">
+        <div class="relative w-full" style="height: 600px;">
             <div id="card-inner" class="flip-card-inner relative w-full">
                 <div class="front shadow-2xl flex flex-col" onclick="flipToBack()">
-                    <div class="h-1/2 bg-slate-900 relative">
+                    <div class="h-[45%] bg-slate-900 relative">
                         <img id="card-image" class="w-full h-full object-cover opacity-0 transition-opacity duration-700" src="">
                     </div>
                     <div class="flex-1 flex flex-col items-center justify-center p-6 bg-white text-center">
@@ -65,21 +65,24 @@
     <script>
         let activeQueue = [];
         let totalCount = 0;
-        let selectedVoice = null;
+        let maleVoice = null;
 
-        function getBestVoice() {
+        // 强制寻找日语男声
+        function findMaleVoice() {
             const voices = window.speechSynthesis.getVoices();
-            selectedVoice = voices.find(v => v.lang.includes('ja') && (v.name.includes('Google') || v.name.includes('Microsoft'))) || 
-                            voices.find(v => v.lang.includes('ja')) || voices[0];
+            // 优先级: 名字中包含 Male, Ichiro, Nanami 的日语语音
+            maleVoice = voices.find(v => v.lang.includes('ja') && (v.name.toLowerCase().includes('male') || v.name.includes('Ichiro') || v.name.includes('Nanami'))) || 
+                        voices.find(v => v.lang.includes('ja')) || voices[0];
+            console.log("Current Voice:", maleVoice ? maleVoice.name : "None");
         }
-        window.speechSynthesis.onvoiceschanged = getBestVoice;
+        window.speechSynthesis.onvoiceschanged = findMaleVoice;
 
         document.getElementById('start-btn').addEventListener('click', function() {
-            getBestVoice();
+            findMaleVoice();
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
             document.getElementById('init-overlay').classList.add('hidden');
             document.getElementById('main-container').classList.remove('hidden');
-            const saved = localStorage.getItem('jflash_v5_6');
+            const saved = localStorage.getItem('jflash_v5_7');
             if (saved) {
                 const d = JSON.parse(saved); activeQueue = d.activeQueue; totalCount = d.totalCount;
                 if (activeQueue.length > 0) renderCard();
@@ -116,13 +119,12 @@
                 const detail = row[2] ? row[2].trim() : "";
                 const lines = detail.split('\n').map(l => l.trim()).filter(l => l);
                 
-                // 修正：从所有行中模糊匹配包含“搭配词”字样的内容
-                const collocationLine = lines.find(l => l.includes('搭配词')) || "";
-
                 return {
                     kanji: word,
                     yomi: lines.find(l => l.includes('[') && !l.includes('【')) || word,
-                    collocation: collocationLine,
+                    // 模糊匹配【搭配词】和【词性变化】
+                    collocation: lines.find(l => l.includes('搭配')) || "",
+                    inflection: lines.find(l => l.includes('變化') || l.includes('变化')) || "",
                     meaning: lines[1] || "",
                     examples: lines.filter(l => /^\d+\./.test(l))
                 };
@@ -149,14 +151,17 @@
             
             const img = document.getElementById('card-image');
             img.style.opacity = '0';
-            img.src = `https://loremflickr.com/800/600/japan,temple?lock=${Math.random()}`;
+            img.src = `https://loremflickr.com/800/600/japan,mountains?lock=${Math.random()}`;
             img.onload = () => img.style.opacity = '1';
 
-            const collHTML = current.collocation ? 
-                `<div class="mb-4 p-4 bg-orange-50 border border-orange-100 rounded-2xl">
-                    <span class="text-[10px] font-black text-orange-400 block mb-1 uppercase tracking-widest">Collocation / 搭配</span>
-                    <p class="text-sm text-orange-900 font-bold">${current.collocation.replace(/【|】/g, '').trim()}</p>
-                </div>` : '';
+            // 搭配词 & 词性变化显示
+            let extraHTML = '';
+            if (current.collocation) {
+                extraHTML += `<div class="mb-2 p-3 bg-orange-50 border border-orange-100 rounded-xl text-sm text-orange-900 font-bold">${current.collocation}</div>`;
+            }
+            if (current.inflection) {
+                extraHTML += `<div class="mb-3 p-3 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-900 font-bold">${current.inflection}</div>`;
+            }
 
             let exHTML = '';
             current.examples.forEach(ex => {
@@ -169,18 +174,16 @@
             });
 
             document.getElementById('back-content').innerHTML = `
-                <div class="mb-6">
+                <div class="mb-4">
                     <div class="flex items-center gap-3">
                         <h2 class="text-4xl font-black text-slate-800 tracking-tighter">${current.kanji}</h2>
                         <button class="text-indigo-500 bg-indigo-50 p-3 rounded-full" onclick="event.stopPropagation(); speak('${current.kanji}')"><i class="fas fa-volume-up text-xl"></i></button>
                     </div>
                     <p class="text-indigo-600 font-bold text-xl mt-1">${current.yomi}</p>
                 </div>
-                ${collHTML}
-                <div class="mb-6 p-5 bg-indigo-50/50 rounded-3xl border border-indigo-100/50">
-                    <p class="text-slate-800 font-medium">${current.meaning}</p>
-                </div>
-                <div class="space-y-2">
+                ${extraHTML}
+                <div class="mb-6 p-4 bg-slate-900 rounded-2xl text-white text-sm font-medium leading-relaxed">${current.meaning}</div>
+                <div class="space-y-1">
                     <span class="text-[10px] font-black text-slate-400 block mb-2 tracking-widest uppercase">Example Sentences</span>
                     ${exHTML || '<p class="text-slate-300 italic text-center text-sm">No examples</p>'}
                 </div>
@@ -192,13 +195,12 @@
         function speak(t) {
             if (!t) return;
             window.speechSynthesis.cancel();
-            // 修正：使用正则剔除所有中英文括号内的内容
-            const cleanText = t.replace(/\（.*?\）|\(.*?\)|（.*?）/g, '');
+            // 终极修复：剔除全角（）和半角()内的所有中文内容
+            const cleanText = t.replace(/\（[\u4e00-\u9fa5a-zA-Z0-9\s，。？！、：；“”‘’]*?\）|\([\u4e00-\u9fa5a-zA-Z0-9\s，。？！、：；“”‘’]*?\)/g, '');
             const u = new SpeechSynthesisUtterance(cleanText);
-            if (selectedVoice) u.voice = selectedVoice;
+            if (maleVoice) u.voice = maleVoice;
             u.lang = 'ja-JP';
-            u.rate = 1.0; // 语速恢复到标准 1.0
-            u.pitch = 1.0;
+            u.rate = 0.95;
             window.speechSynthesis.speak(u);
         }
 
@@ -214,7 +216,7 @@
 
         function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
         function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
-        function saveProgress() { localStorage.setItem('jflash_v5_6', JSON.stringify({ activeQueue, totalCount })); }
+        function saveProgress() { localStorage.setItem('jflash_v5_7', JSON.stringify({ activeQueue, totalCount })); }
         function updateUI() {
             const prog = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
             document.getElementById('progress-bar').style.width = prog + '%';
