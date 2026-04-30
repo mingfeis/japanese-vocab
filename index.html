@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>J-Flash Pro V7.3</title>
+    <title>J-Flash Pro V7.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -21,18 +21,16 @@
 <body class="min-h-screen flex flex-col items-center p-4">
 
     <div id="init-overlay" class="fixed inset-0 z-50 bg-indigo-600 flex flex-col items-center justify-center text-white p-6 text-center">
-        <h1 class="text-3xl font-black mb-4 uppercase italic">J-Flash V7.3</h1>
-        <button id="start-btn" class="bg-white text-indigo-600 px-16 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all">解锁并进入学习</button>
+        <h1 class="text-3xl font-black mb-4 uppercase italic">J-Flash V7.4</h1>
+        <button id="start-btn" class="bg-white text-indigo-600 px-16 py-4 rounded-full font-black shadow-2xl active:scale-95 transition-all">解锁并开始</button>
     </div>
 
     <div class="w-full max-w-md glass-panel p-4 rounded-3xl mb-4 flex items-center justify-between">
         <div class="flex flex-col">
             <span id="progress-text" class="text-[10px] font-black text-indigo-300 uppercase">Progress: 0/0</span>
-            <div class="w-24 bg-white/10 h-1 rounded-full mt-1 overflow-hidden">
-                <div id="progress-bar" class="bg-indigo-500 h-full w-0 transition-all"></div>
-            </div>
+            <div class="w-24 bg-white/10 h-1 rounded-full mt-1 overflow-hidden"><div id="progress-bar" class="bg-indigo-500 h-full w-0 transition-all"></div></div>
         </div>
-        <button onclick="document.getElementById('csv-input').click()" class="bg-indigo-500 text-white text-xs px-5 py-2 rounded-xl font-black shadow-lg">导入 CSV</button>
+        <button onclick="document.getElementById('csv-input').click()" class="bg-indigo-500 text-white text-xs px-5 py-2 rounded-xl font-black">导入 CSV</button>
         <input type="file" id="csv-input" accept=".csv" class="hidden">
     </div>
 
@@ -70,7 +68,6 @@
 
         function findVoice() {
             const vs = window.speechSynthesis.getVoices();
-            // 锁定优质女声
             femaleVoice = vs.find(v => v.lang.includes('ja') && (v.name.includes('Google') || v.name.includes('Nanami') || v.name.includes('Kyoko'))) || 
                           vs.find(v => v.lang.includes('ja')) || vs[0];
         }
@@ -81,7 +78,7 @@
             window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
             document.getElementById('init-overlay').classList.add('hidden');
             document.getElementById('main-container').classList.remove('hidden');
-            const saved = localStorage.getItem('jflash_v7_3');
+            const saved = localStorage.getItem('jflash_v7_4');
             if (saved) {
                 const d = JSON.parse(saved); activeQueue = d.activeQueue; totalCount = d.totalCount;
                 if (activeQueue.length > 0) renderCard();
@@ -115,15 +112,18 @@
                 const detail = (row[2] || "").trim();
                 const lines = detail.split(/\r?\n|\n/).map(l => l.trim()).filter(l => l);
                 
-                const collocation = lines.find(l => l.includes('搭配词')) || "";
-                const inflection = lines.find(l => l.includes('变化') || l.includes('變化') || l.includes('詞性')) || "";
+                // 1. 强制提取包含关键词的行作为标签
+                const colLine = lines.find(l => l.includes('搭配')) || "";
+                const infLine = lines.find(l => l.includes('变化') || l.includes('變化') || l.includes('詞性')) || "";
+                
+                // 2. 物理过滤：只要行里包含 [ ] 词性标记或是重复的单词，整行物理删除
                 const examples = lines.filter(l => /^\d+\./.test(l));
 
                 return {
                     kanji: word,
                     yomi: lines.find(l => l.includes('[') && !l.includes('【')) || word,
-                    collocation: collocation,
-                    inflection: inflection,
+                    collocation: colLine,
+                    inflection: infLine,
                     examples: examples
                 };
             }).filter(item => item.kanji);
@@ -147,14 +147,13 @@
             document.getElementById('card-inner').classList.remove('flipped');
             document.getElementById('word-front').innerText = current.kanji;
             
-            // 强制图片随机变化
             const img = document.getElementById('card-image');
             img.style.opacity = '0';
             const randomID = Math.floor(Math.random() * 1000);
             img.src = `https://picsum.photos/id/${randomID}/800/600`;
             img.onload = () => img.style.opacity = '1';
 
-            // 背面：仅保留单词标题、读音标签和例句
+            // 背面：物理切除中间冗余
             let tagsHTML = '';
             if (current.collocation) tagsHTML += `<div class="mb-3 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl text-sm text-indigo-900 font-bold shadow-sm">${current.collocation}</div>`;
             if (current.inflection) tagsHTML += `<div class="mb-3 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl text-sm text-indigo-900 font-bold shadow-sm">${current.inflection}</div>`;
@@ -192,7 +191,6 @@
         function speak(t) {
             if (!t) return;
             window.speechSynthesis.cancel();
-            // 剔除括号及其中的中文内容
             let clean = t.replace(/^\d+\.\s*/, '').replace(/\（.*?\）|\(.*?\)|（.*?）/g, '').replace(/【.*?】/g, '');
             const u = new SpeechSynthesisUtterance(clean);
             if (femaleVoice) u.voice = femaleVoice;
@@ -212,7 +210,7 @@
 
         function flipToBack() { document.getElementById('card-inner').classList.add('flipped'); }
         function flipToFront() { document.getElementById('card-inner').classList.remove('flipped'); }
-        function saveProgress() { localStorage.setItem('jflash_v7_3', JSON.stringify({ activeQueue, totalCount })); }
+        function saveProgress() { localStorage.setItem('jflash_v7_4', JSON.stringify({ activeQueue, totalCount })); }
         function updateUI() {
             const prog = totalCount > 0 ? ((totalCount - activeQueue.length) / totalCount) * 100 : 0;
             document.getElementById('progress-bar').style.width = prog + '%';
